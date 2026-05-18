@@ -51,6 +51,7 @@ export function WineForm({ initial = {}, aiConfidence, sectionLabels, onSubmit, 
     drinking_window_start: undefined,
     drinking_window_end: undefined,
     priority: 'medium',
+    price: undefined,
     notes: '',
     why_interesting: '',
     ...initial,
@@ -89,7 +90,7 @@ export function WineForm({ initial = {}, aiConfidence, sectionLabels, onSubmit, 
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-4 gap-3">
         <div className="space-y-1">
           <Label>
             Vintage
@@ -107,12 +108,30 @@ export function WineForm({ initial = {}, aiConfidence, sectionLabels, onSubmit, 
           </Select>
         </div>
         <div className="space-y-1">
-          <Label>Quantity</Label>
+          <Label>Qty</Label>
           <Input type="number" min={1} value={form.quantity_added ?? 1} onChange={(e) => {
             const q = parseInt(e.target.value) || 1
             set('quantity_added', q)
             set('quantity_remaining', q)
           }} />
+        </div>
+        <div className="space-y-1">
+          <Label>
+            Price
+            <ConfidenceHint field="price" confidence={aiConfidence} />
+          </Label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+            <Input
+              type="number"
+              min={0}
+              step={1}
+              className="pl-6"
+              value={form.price ?? ''}
+              onChange={(e) => set('price', e.target.value ? parseFloat(e.target.value) : undefined)}
+              placeholder="45"
+            />
+          </div>
         </div>
       </div>
 

@@ -24,6 +24,7 @@ export const wines = sqliteTable('wines', {
   drinking_window_start: integer('drinking_window_start'),
   drinking_window_end:   integer('drinking_window_end'),
   priority:              text('priority').default('medium'),
+  price:                 real('price'),
   notes:                 text('notes'),
   why_interesting:       text('why_interesting'),
   ai_confidence:         text('ai_confidence', { mode: 'json' }).$type<Record<string, number>>(),

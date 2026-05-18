@@ -51,7 +51,7 @@ export function WineDetailSheet({ wine, open, onClose, onDrank }: Props) {
               <Detail label="Bottles Remaining" value={`${wine.quantity_remaining} of ${wine.quantity_added}`} />
               <Detail label="Cellar Section" value={wine.cellar_section} />
               <Detail label="Drinking Window" value={wine.drinking_window_start ? `${wine.drinking_window_start}–${wine.drinking_window_end ?? '?'}` : null} />
-              <Detail label="Priority" value={wine.priority ? wine.priority.charAt(0).toUpperCase() + wine.priority.slice(1) : null} />
+              <Detail label="Price" value={wine.price != null ? `$${wine.price % 1 === 0 ? wine.price : wine.price.toFixed(2)}` : null} />
             </div>
 
             {wine.why_interesting && (
