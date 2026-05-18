@@ -51,13 +51,16 @@ export async function getCellarContext() {
     .limit(30)
 }
 
-export async function getAlertWines() {
-  const currentYear = new Date().getFullYear()
-  return db
-    .select()
+// Targeted query for section bottle counts — used by enrich-wine route
+export async function getSectionCounts(): Promise<Record<number, number>> {
+  const rows = await db
+    .select({ section: wines.cellar_section, bottles: sql<number>`sum(${wines.quantity_remaining})` })
     .from(wines)
-    .where(
-      sql`${wines.quantity_remaining} > 0 AND ${wines.drinking_window_end} IS NOT NULL AND ${wines.drinking_window_end} < ${currentYear}`
-    )
-    .orderBy(wines.drinking_window_end)
+    .groupBy(wines.cellar_section)
+  const counts: Record<number, number> = {}
+  for (const row of rows) {
+    const n = parseInt(row.section ?? '')
+    if (n >= 1 && n <= 10) counts[n] = Number(row.bottles)
+  }
+  return counts
 }

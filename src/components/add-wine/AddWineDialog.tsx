@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { WineForm } from './WineForm'
 import { createWine } from '@/actions/wines'
+import type { Wine } from '@/db/schema'
 import { Camera, PenLine, MessageSquare, Loader2, AlertCircle, ChevronDown, ChevronUp, Check } from 'lucide-react'
 
 type Mode = 'choose' | 'manual' | 'scan' | 'natural'
@@ -14,6 +15,7 @@ interface Props {
   open: boolean
   onClose: () => void
   sectionLabels?: Record<number, string>
+  existingWines?: Wine[]
 }
 
 interface WineEntry {
@@ -24,18 +26,54 @@ interface WineEntry {
   formData: any
   expanded: boolean
   saved: boolean
+  duplicate: Wine | null
 }
 
-export function AddWineDialog({ open, onClose, sectionLabels }: Props) {
+function findDuplicate(existing: Wine[], winery: string, wine_name: string, vintage?: number | null): Wine | null {
+  if (!winery || !wine_name) return null
+  return existing.find(w =>
+    w.quantity_remaining > 0 &&
+    w.winery.toLowerCase().trim() === winery.toLowerCase().trim() &&
+    w.wine_name.toLowerCase().trim() === wine_name.toLowerCase().trim() &&
+    (vintage == null || w.vintage === vintage)
+  ) ?? null
+}
+
+// Resize image to max 1280px on longest side before upload (big win for iPhone photos)
+async function resizeImage(base64: string, mimeType: string): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => {
+      const MAX = 1280
+      let { width, height } = img
+      if (width > MAX || height > MAX) {
+        if (width > height) { height = Math.round(height * MAX / width); width = MAX }
+        else { width = Math.round(width * MAX / height); height = MAX }
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = width; canvas.height = height
+      canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+      resolve(canvas.toDataURL('image/jpeg', 0.85).split(',')[1])
+    }
+    img.onerror = () => resolve(base64)
+    img.src = `data:${mimeType};base64,${base64}`
+  })
+}
+
+export function AddWineDialog({ open, onClose, sectionLabels, existingWines = [] }: Props) {
   const [mode, setMode] = useState<Mode>('choose')
   const [naturalText, setNaturalText] = useState('')
   const [wines, setWines] = useState<WineEntry[]>([])
   const [parsing, setParsing] = useState(false)
   const [savingAll, setSavingAll] = useState(false)
   const [parseError, setParseError] = useState('')
+
+  // Scan state
   const [scannedData, setScannedData] = useState<any>(null)
-  const [scanEnriching, setScanEnriching] = useState(false)
-  const [scanEnriched, setScanEnriched] = useState<any>(null)
+  const [scanEnrichRaw, setScanEnrichRaw] = useState<any>(null)  // raw enrichment for supplement
+  const [scanLoading, setScanLoading] = useState(false)     // reading label
+  const [scanEnrichingBg, setScanEnrichingBg] = useState(false)  // enriching in background
+  const [scanDuplicate, setScanDuplicate] = useState<Wine | null>(null)
 
   // Camera state
   const [cameraActive, setCameraActive] = useState(false)
@@ -46,7 +84,9 @@ export function AddWineDialog({ open, onClose, sectionLabels }: Props) {
   const streamRef = useRef<MediaStream | null>(null)
   const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
 
-  // Start camera only after the video element is in the DOM
+  // Manual mode duplicate check
+  const [manualDuplicate, setManualDuplicate] = useState<Wine | null>(null)
+
   useEffect(() => {
     if (cameraRequested && videoRef.current && !cameraActive) {
       setCameraRequested(false)
@@ -60,7 +100,11 @@ export function AddWineDialog({ open, onClose, sectionLabels }: Props) {
     setWines([])
     setParseError('')
     setScannedData(null)
-    setScanEnriched(null)
+    setScanEnrichRaw(null)
+    setScanLoading(false)
+    setScanEnrichingBg(false)
+    setScanDuplicate(null)
+    setManualDuplicate(null)
     stopCamera()
   }
 
@@ -75,7 +119,6 @@ export function AddWineDialog({ open, onClose, sectionLabels }: Props) {
   const startCamera = async () => {
     setCameraError('')
     try {
-      // Desktop (Mac) only has a front-facing camera — don't constrain facingMode
       const constraints = isMobile
         ? { video: { facingMode: 'environment' } }
         : { video: { width: { ideal: 1920 }, height: { ideal: 1080 } } }
@@ -106,41 +149,75 @@ export function AddWineDialog({ open, onClose, sectionLabels }: Props) {
   const handleFileCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    if (file.type === 'image/heic' || file.type === 'image/heif') {
+      setCameraError('HEIC images are not supported. Please take a JPEG photo or convert the image first.')
+      return
+    }
     const reader = new FileReader()
     reader.onload = async () => {
-      const base64 = (reader.result as string).split(',')[1]
-      await processScanImage(base64, file.type)
+      const raw = (reader.result as string).split(',')[1]
+      const resized = await resizeImage(raw, file.type)
+      await processScanImage(resized, 'image/jpeg')
     }
     reader.readAsDataURL(file)
   }
 
   const processScanImage = async (base64: string, mediaType: string) => {
-    setScanEnriching(true)
+    setScanLoading(true)
+    setCameraError('')
     setMode('scan')
+
     try {
+      // Step 1: Scan label (fast ~5s) — show form immediately
       const scanRes = await fetch('/api/scan-label', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image: base64, mediaType }),
       })
       const scanned = await scanRes.json()
-      setScannedData(scanned)
 
-      const enrichRes = await fetch('/api/enrich-wine', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(scanned),
-      })
-      const enriched = await enrichRes.json()
-      const merged = mergeData(scanned, enriched)
-      setScanEnriched(merged)
+      if (scanned.error) {
+        setCameraError(scanned.error)
+        setScanLoading(false)
+        return
+      }
+
+      if (!scanned.winery && !scanned.wine_name) {
+        setCameraError('Could not read any wine details from the label. Try better lighting or a clearer photo.')
+        setScanLoading(false)
+        return
+      }
+
+      setScannedData(scanned)
+      setScanLoading(false)
+
+      // Check for duplicate
+      if (scanned.winery || scanned.wine_name) {
+        setScanDuplicate(findDuplicate(existingWines, scanned.winery, scanned.wine_name, scanned.vintage))
+      }
+
+      // Step 2: Enrich in background — form is already showing
+      setScanEnrichingBg(true)
+      try {
+        const enrichRes = await fetch('/api/enrich-wine', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...scanned }),
+        })
+        const enriched = await enrichRes.json()
+        setScanEnrichRaw(enriched)
+      } catch {
+        // Enrichment failed silently — form still works with scan data
+      } finally {
+        setScanEnrichingBg(false)
+      }
     } catch {
       setCameraError('Scan failed. Try uploading a photo instead.')
-    } finally {
-      setScanEnriching(false)
+      setScanLoading(false)
     }
   }
 
+  // Only prefer base values over enriched for non-null base values
   const mergeData = (base: any, enriched: any) => {
     const result: Record<string, unknown> = {}
     const allKeys = Array.from(new Set([...Object.keys(base ?? {}), ...Object.keys(enriched ?? {})]))
@@ -167,36 +244,43 @@ export function AddWineDialog({ open, onClose, sectionLabels }: Props) {
         return
       }
 
-      const entries: WineEntry[] = data.wines.map((w: any, i: number) => ({
-        id: `${i}-${Date.now()}`,
-        parsed: w,
-        enriched: null,
-        enriching: true,
-        formData: w,
-        expanded: i === 0,
-        saved: false,
-      }))
+      const entries: WineEntry[] = data.wines.map((w: any, i: number) => {
+        // Map quantity → quantity_added / quantity_remaining
+        const qty = w.quantity ?? 1
+        const parsed = { ...w, quantity_added: qty, quantity_remaining: qty }
+        delete parsed.quantity
+
+        return {
+          id: `${Date.now()}-${i}`,
+          parsed,
+          enriched: null,
+          enriching: true,
+          formData: parsed,
+          expanded: i === 0,
+          saved: false,
+          duplicate: findDuplicate(existingWines, w.winery, w.wine_name, w.vintage),
+        }
+      })
       setWines(entries)
 
-      // Enrich all in parallel
+      // Enrich all in parallel — use entry IDs, not array indices, to avoid closure staleness
       data.wines.forEach(async (w: any, i: number) => {
+        const entryId = entries[i].id
+        const qty = w.quantity ?? 1
         try {
           const res = await fetch('/api/enrich-wine', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...w, _originalText: naturalText }),
+            body: JSON.stringify({ ...w, quantity_added: qty, quantity_remaining: qty, _originalText: naturalText }),
           })
           const enriched = await res.json()
-          const merged = mergeData(w, enriched)
-          setWines(prev => prev.map((e, idx) => idx === i
+          const merged = mergeData({ ...w, quantity_added: qty, quantity_remaining: qty }, enriched)
+          setWines(prev => prev.map(e => e.id === entryId
             ? { ...e, enriched: merged, formData: merged, enriching: false }
             : e
           ))
         } catch {
-          setWines(prev => prev.map((e, idx) => idx === i
-            ? { ...e, enriching: false }
-            : e
-          ))
+          setWines(prev => prev.map(e => e.id === entryId ? { ...e, enriching: false } : e))
         }
       })
     } catch {
@@ -232,13 +316,33 @@ export function AddWineDialog({ open, onClose, sectionLabels }: Props) {
   }
 
   const handleSaveScanned = async (formData: any) => {
-    await createWine({ ...formData, ai_confidence: scanEnriched?.ai_confidence ?? null })
+    await createWine({
+      ...formData,
+      ai_confidence: scanEnrichRaw?.ai_confidence ?? null,
+    })
     handleClose()
   }
 
   const wineLabel = (w: WineEntry) => {
     const d = w.formData
     return [d.vintage, d.winery, d.wine_name].filter(Boolean).join(' ') || 'Unknown Wine'
+  }
+
+  const handleManualSubmit = async (formData: any) => {
+    // Enrichment already done by Claude; ensure user-typed values win
+    const enrichRes = await fetch('/api/enrich-wine', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData),
+    })
+    const enriched = await enrichRes.json()
+    // User values always win: spread enriched first, then override with formData
+    await createWine({
+      ...enriched,
+      ...formData,
+      ai_confidence: enriched?.ai_confidence ?? null,
+    } as any)
+    handleClose()
   }
 
   return (
@@ -249,7 +353,7 @@ export function AddWineDialog({ open, onClose, sectionLabels }: Props) {
             {mode === 'choose' && 'Add Wine'}
             {mode === 'manual' && 'Add Wine'}
             {mode === 'natural' && (wines.length > 1 ? `Review ${wines.length} Wines` : 'Add Wine')}
-            {mode === 'scan' && 'Label Scanned'}
+            {mode === 'scan' && 'Label Scan'}
           </DialogTitle>
         </DialogHeader>
 
@@ -276,7 +380,7 @@ export function AddWineDialog({ open, onClose, sectionLabels }: Props) {
               <MessageSquare className="h-5 w-5 text-muted-foreground shrink-0" />
               <div>
                 <div className="font-medium">Just Type It</div>
-                <div className="text-sm text-muted-foreground">"Arnot Roberts Pinot 2021, 3 bottles of DRC 2018..."</div>
+                <div className="text-sm text-muted-foreground">"Arnot Roberts Pinot 2021, 3 bottles of DRC 2018..." — gifts, notes, anything</div>
               </div>
             </button>
           </div>
@@ -285,9 +389,9 @@ export function AddWineDialog({ open, onClose, sectionLabels }: Props) {
         {/* Natural language input */}
         {mode === 'natural' && wines.length === 0 && (
           <div className="space-y-4 py-2">
-            <p className="text-sm text-muted-foreground">Describe one or more wines. Claude parses and fills in all details.</p>
+            <p className="text-sm text-muted-foreground">Describe one or more wines. Add any notes (e.g. "gift from Dom & Becca") and they'll be saved. Claude parses and fills in all details.</p>
             <Textarea
-              placeholder="Arnot Roberts Pinot 2021, 3 bottles of DRC La Tâche 2015, Nalle Zin 2022..."
+              placeholder="Arnot Roberts Pinot 2021, 3 bottles of DRC La Tâche 2015, gift from mom — Nalle Zin 2022..."
               value={naturalText}
               onChange={(e) => setNaturalText(e.target.value)}
               rows={4}
@@ -308,7 +412,7 @@ export function AddWineDialog({ open, onClose, sectionLabels }: Props) {
           </div>
         )}
 
-        {/* Accordion review for multiple wines */}
+        {/* Accordion review */}
         {mode === 'natural' && wines.length > 0 && (
           <div className="space-y-3 py-2">
             {wines.map((wine) => (
@@ -322,6 +426,9 @@ export function AddWineDialog({ open, onClose, sectionLabels }: Props) {
                     {wine.enriching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />}
                     <div>
                       <span className="font-medium">{wineLabel(wine)}</span>
+                      {wine.duplicate && !wine.enriching && (
+                        <span className="ml-2 text-xs text-amber-600 dark:text-amber-400">⚠ Already in cellar ({wine.duplicate.quantity_remaining} bottles)</span>
+                      )}
                       {wine.enriching && <span className="text-xs text-muted-foreground ml-2">Enriching...</span>}
                       {wine.formData.varietal_blend && !wine.enriching && (
                         <span className="text-xs text-muted-foreground ml-2">{wine.formData.varietal_blend}</span>
@@ -333,6 +440,11 @@ export function AddWineDialog({ open, onClose, sectionLabels }: Props) {
 
                 {wine.expanded && !wine.enriching && (
                   <div className="p-3 border-t border-border bg-background/50">
+                    {wine.duplicate && (
+                      <div className="mb-3 p-2.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md text-sm text-amber-800 dark:text-amber-200">
+                        ⚠ You already have <strong>{wine.duplicate.quantity_remaining}</strong> bottle{wine.duplicate.quantity_remaining !== 1 ? 's' : ''} of this in your cellar. Adding another anyway.
+                      </div>
+                    )}
                     {wine.enriched?.why_interesting && (
                       <div className="mb-3 p-2.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md text-sm">
                         <span className="font-medium text-amber-800 dark:text-amber-200">✨ </span>
@@ -359,9 +471,7 @@ export function AddWineDialog({ open, onClose, sectionLabels }: Props) {
             ))}
 
             <div className="flex gap-2 pt-2">
-              <Button variant="outline" onClick={() => { setWines([]); setMode('natural') }} className="shrink-0">
-                ← Edit
-              </Button>
+              <Button variant="outline" onClick={() => { setWines([]); setMode('natural') }} className="shrink-0">← Edit</Button>
               <Button
                 onClick={handleSaveAll}
                 disabled={savingAll || wines.some(w => w.enriching)}
@@ -379,7 +489,6 @@ export function AddWineDialog({ open, onClose, sectionLabels }: Props) {
             {/* Desktop camera */}
             {!isMobile && !scannedData && (
               <div className="space-y-3">
-                {/* Video always in DOM so ref is ready before startCamera runs */}
                 <div className={cameraActive ? 'space-y-3' : 'hidden'}>
                   <div className="relative rounded-lg overflow-hidden bg-black aspect-video">
                     <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
@@ -402,7 +511,7 @@ export function AddWineDialog({ open, onClose, sectionLabels }: Props) {
                       <Button onClick={startCamera} className="flex-1">Use Camera</Button>
                       <label className="flex-1">
                         <Button variant="outline" className="w-full" asChild><span>Upload Photo</span></Button>
-                        <input type="file" accept="image/*" className="hidden" onChange={handleFileCapture} />
+                        <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFileCapture} />
                       </label>
                     </div>
                   </div>
@@ -411,41 +520,63 @@ export function AddWineDialog({ open, onClose, sectionLabels }: Props) {
             )}
 
             {/* Mobile file input */}
-            {isMobile && !scannedData && (
-              <label className="block">
-                <Button className="w-full" asChild><span>📸 Take Photo / Upload</span></Button>
-                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileCapture} />
-              </label>
-            )}
-
-            {/* Loading */}
-            {scanEnriching && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground p-3 bg-muted rounded-md">
-                <Loader2 className="h-4 w-4 animate-spin" /> Reading label...
+            {isMobile && !scannedData && !scanLoading && (
+              <div className="space-y-2">
+                {cameraError && (
+                  <div className="text-sm text-destructive flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" /> {cameraError}
+                  </div>
+                )}
+                <label className="block">
+                  <Button className="w-full" asChild><span>📸 Take Photo / Upload</span></Button>
+                  <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="hidden" onChange={handleFileCapture} />
+                </label>
               </div>
             )}
 
-            {/* Form after scan */}
-            {!scanEnriching && scanEnriched && (
+            {/* Step 1: Reading label */}
+            {scanLoading && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground p-4 bg-muted rounded-md">
+                <Loader2 className="h-4 w-4 animate-spin" /> Reading label... (this takes about 5 seconds)
+              </div>
+            )}
+
+            {/* Step 2+: Form shown immediately after scan, with background enrichment indicator */}
+            {!scanLoading && scannedData && (
               <>
-                {scanEnriched.why_interesting && (
-                  <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md text-sm">
-                    <span className="font-medium text-amber-800 dark:text-amber-200">✨ </span>
-                    <span className="text-amber-700 dark:text-amber-300">{scanEnriched.why_interesting}</span>
+                {scanDuplicate && (
+                  <div className="p-2.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md text-sm text-amber-800 dark:text-amber-200">
+                    ⚠ You already have <strong>{scanDuplicate.quantity_remaining}</strong> bottle{scanDuplicate.quantity_remaining !== 1 ? 's' : ''} of this in your cellar.
                   </div>
                 )}
+
+                {scanEnrichingBg && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Claude is researching this wine and filling in more details...
+                  </div>
+                )}
+
+                {scanEnrichRaw?.why_interesting && (
+                  <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md text-sm">
+                    <span className="font-medium text-amber-800 dark:text-amber-200">✨ </span>
+                    <span className="text-amber-700 dark:text-amber-300">{scanEnrichRaw.why_interesting}</span>
+                  </div>
+                )}
+
                 <WineForm
                   key="scan"
-                  initial={scanEnriched}
-                  aiConfidence={scanEnriched.ai_confidence}
-                sectionLabels={sectionLabels}
+                  initial={scannedData}
+                  aiConfidence={scanEnrichRaw?.ai_confidence}
+                  enrichSupplement={scanEnrichRaw}
+                  sectionLabels={sectionLabels}
                   onSubmit={handleSaveScanned}
                   submitLabel="Save Wine"
                 />
               </>
             )}
 
-            {!scannedData && !scanEnriching && (
+            {!scannedData && !scanLoading && (
               <Button variant="ghost" className="w-full" onClick={() => { setMode('choose'); stopCamera() }}>← Back</Button>
             )}
           </div>
@@ -454,22 +585,20 @@ export function AddWineDialog({ open, onClose, sectionLabels }: Props) {
         {/* Manual entry */}
         {mode === 'manual' && (
           <div className="py-2">
+            {manualDuplicate && (
+              <div className="mb-3 p-2.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md text-sm text-amber-800 dark:text-amber-200">
+                ⚠ You already have <strong>{manualDuplicate.quantity_remaining}</strong> bottle{manualDuplicate.quantity_remaining !== 1 ? 's' : ''} of this in your cellar.
+              </div>
+            )}
             <WineForm
               key="manual"
               sectionLabels={sectionLabels}
               initial={{}}
               onSubmit={async (formData) => {
-                const res = await fetch('/api/enrich-wine', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(formData),
-                })
-                const enriched = await res.json()
-                const merged = mergeData(formData, enriched)
-                await createWine({ winery: formData.winery, wine_name: formData.wine_name, ...merged, ai_confidence: enriched?.ai_confidence ?? null } as any)
-                handleClose()
+                setManualDuplicate(findDuplicate(existingWines, formData.winery, formData.wine_name, formData.vintage))
+                await handleManualSubmit(formData)
               }}
-              submitLabel="Save Wine"
+              submitLabel="Save Wine — Claude will fill in details"
             />
             <Button variant="ghost" className="w-full mt-2" onClick={() => setMode('choose')}>← Back</Button>
           </div>

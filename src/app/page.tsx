@@ -18,7 +18,7 @@ export default async function HomePage() {
             {wines.filter(w => w.quantity_remaining > 0).length} wines · {wines.reduce((s, w) => s + w.quantity_remaining, 0)} bottles
           </p>
         </div>
-        <AddWineButton sectionLabels={sectionLabels} />
+        <AddWineButton sectionLabels={sectionLabels} wines={wines} />
       </div>
       <CellarGrid wines={wines} sectionLabels={sectionLabels} />
     </div>

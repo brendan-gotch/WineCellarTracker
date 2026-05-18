@@ -6,15 +6,27 @@ export function computeDrinkingStatus(
   currentYear = new Date().getFullYear()
 ): DrinkingStatus {
   if (!windowStart && !windowEnd) return 'unknown'
+
+  // Past-peak checks (only need windowEnd)
   if (windowEnd && currentYear > windowEnd + 3) return 'overdue'
   if (windowEnd && currentYear > windowEnd) return 'past_peak'
+
+  // Both start and end known — can determine peak vs ready
   if (windowStart && windowEnd) {
     const midpoint = Math.floor((windowStart + windowEnd) / 2)
     if (currentYear >= midpoint) return 'peak'
     if (currentYear >= windowStart) return 'ready'
+    return 'not_ready'
   }
-  if (windowStart && currentYear >= windowStart) return 'ready'
-  return 'not_ready'
+
+  // Only windowStart known — can determine ready vs not_ready, but not peak
+  if (windowStart) {
+    return currentYear >= windowStart ? 'ready' : 'not_ready'
+  }
+
+  // Only windowEnd known — wine is before its end; we can't know start
+  // Treat as ready (it's within or approaching its window)
+  return 'ready'
 }
 
 export const DRINKING_STATUS_LABELS: Record<DrinkingStatus, string> = {

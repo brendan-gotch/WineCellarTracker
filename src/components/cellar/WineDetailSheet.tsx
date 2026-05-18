@@ -88,6 +88,7 @@ export function WineDetailSheet({ wine, open, onClose, onDrank }: Props) {
             <WineForm
               initial={wine as any}
               aiConfidence={wine.ai_confidence ?? undefined}
+              isEditMode={true}
               onSubmit={handleUpdate}
               submitLabel="Save Changes"
             />

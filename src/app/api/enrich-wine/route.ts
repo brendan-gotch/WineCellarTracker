@@ -1,20 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { anthropic } from '@/lib/anthropic'
 import { buildEnrichmentPrompt } from '@/lib/wine-prompts'
-import { getCellarContext, getWines } from '@/actions/wines'
+import { getCellarContext, getSectionCounts } from '@/actions/wines'
 
 export async function POST(req: NextRequest) {
   const known = await req.json()
-  const [cellarContext, allWines] = await Promise.all([getCellarContext(), getWines()])
-
-  // Compute section bottle counts for distribution-aware suggestions
-  const sectionCounts: Record<number, number> = {}
-  allWines.forEach(w => {
-    const num = parseInt(w.cellar_section ?? '')
-    if (num >= 1 && num <= 10) {
-      sectionCounts[num] = (sectionCounts[num] || 0) + w.quantity_remaining
-    }
-  })
+  const [cellarContext, sectionCounts] = await Promise.all([getCellarContext(), getSectionCounts()])
 
   const prompt = buildEnrichmentPrompt(known, cellarContext, sectionCounts)
 

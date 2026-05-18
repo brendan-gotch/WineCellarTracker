@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -9,9 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { BOTTLE_FORMATS } from '@/db/schema'
 import type { Wine } from '@/db/schema'
 import { SECTION_COUNT, BASE_SECTION_LABELS } from '@/lib/cellar-sections'
-import { cn } from '@/lib/utils'
 
-type WineFormData = Partial<Omit<Wine, 'id' | 'created_at' | 'updated_at' | 'last_verified'>> & {
+type WineFormData = Partial<Omit<Wine, 'id' | 'created_at' | 'updated_at' | 'last_verified' | 'priority'>> & {
   winery: string
   wine_name: string
 }
@@ -19,7 +18,9 @@ type WineFormData = Partial<Omit<Wine, 'id' | 'created_at' | 'updated_at' | 'las
 interface Props {
   initial?: Partial<WineFormData>
   aiConfidence?: Record<string, number>
+  enrichSupplement?: Record<string, unknown> | null
   sectionLabels?: Record<number, string>
+  isEditMode?: boolean
   onSubmit: (data: WineFormData) => Promise<void>
   submitLabel?: string
 }
@@ -29,14 +30,10 @@ function ConfidenceHint({ field, confidence }: { field: string; confidence?: Rec
   const score = confidence[field] ?? 0
   const label = score >= 0.6 ? 'medium confidence' : 'low confidence'
   const color = score >= 0.6 ? 'text-amber-500 dark:text-amber-400' : 'text-red-500 dark:text-red-400'
-  return (
-    <span className={`ml-1 text-xs ${color}`}>
-      {label}
-    </span>
-  )
+  return <span className={`ml-1 text-xs ${color}`}>{label}</span>
 }
 
-export function WineForm({ initial = {}, aiConfidence, sectionLabels, onSubmit, submitLabel = 'Save Wine' }: Props) {
+export function WineForm({ initial = {}, aiConfidence, enrichSupplement, sectionLabels, isEditMode = false, onSubmit, submitLabel = 'Save Wine' }: Props) {
   const [form, setForm] = useState<WineFormData>({
     winery: '',
     wine_name: '',
@@ -50,13 +47,31 @@ export function WineForm({ initial = {}, aiConfidence, sectionLabels, onSubmit, 
     cellar_section: '',
     drinking_window_start: undefined,
     drinking_window_end: undefined,
-    priority: 'medium',
     price: undefined,
     notes: '',
     why_interesting: '',
     ...initial,
   })
   const [saving, setSaving] = useState(false)
+  const supplementApplied = useRef(false)
+
+  // When background enrichment arrives, fill in fields that are still empty
+  useEffect(() => {
+    if (!enrichSupplement || supplementApplied.current) return
+    supplementApplied.current = true
+    setForm(prev => {
+      const next = { ...prev }
+      for (const [k, v] of Object.entries(enrichSupplement)) {
+        if (k === 'ai_confidence' || k === 'confidence') continue
+        const key = k as keyof WineFormData
+        const current = (prev as any)[key]
+        if (current === null || current === undefined || current === '' || current === 0) {
+          (next as any)[key] = v
+        }
+      }
+      return next
+    })
+  }, [enrichSupplement])
 
   const set = (field: keyof WineFormData, value: unknown) =>
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -108,14 +123,42 @@ export function WineForm({ initial = {}, aiConfidence, sectionLabels, onSubmit, 
           </Select>
         </div>
         <div className="space-y-1">
-          <Label>Qty</Label>
+          <Label>{isEditMode ? 'Purchased' : 'Qty'}</Label>
           <Input type="number" min={1} value={form.quantity_added ?? 1} onChange={(e) => {
             const q = parseInt(e.target.value) || 1
             set('quantity_added', q)
-            set('quantity_remaining', q)
+            if (!isEditMode) set('quantity_remaining', q)
           }} />
         </div>
-        <div className="space-y-1">
+        {isEditMode ? (
+          <div className="space-y-1">
+            <Label>In Cellar</Label>
+            <Input type="number" min={0} value={form.quantity_remaining ?? 0} onChange={(e) => set('quantity_remaining', parseInt(e.target.value) || 0)} />
+          </div>
+        ) : (
+          <div className="space-y-1">
+            <Label>
+              Price
+              <ConfidenceHint field="price" confidence={aiConfidence} />
+            </Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+              <Input
+                type="number"
+                min={0}
+                step={1}
+                className="pl-6"
+                value={form.price ?? ''}
+                onChange={(e) => set('price', e.target.value ? parseFloat(e.target.value) : undefined)}
+                placeholder="45"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {isEditMode && (
+        <div className="space-y-1 w-1/2 pr-1.5">
           <Label>
             Price
             <ConfidenceHint field="price" confidence={aiConfidence} />
@@ -133,7 +176,7 @@ export function WineForm({ initial = {}, aiConfidence, sectionLabels, onSubmit, 
             />
           </div>
         </div>
-      </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
@@ -168,14 +211,14 @@ export function WineForm({ initial = {}, aiConfidence, sectionLabels, onSubmit, 
             Drink From
             <ConfidenceHint field="drinking_window_start" confidence={aiConfidence} />
           </Label>
-          <Input type="number" min={2000} max={2099} value={form.drinking_window_start ?? ''} onChange={(e) => set('drinking_window_start', e.target.value ? parseInt(e.target.value) : undefined)} placeholder="2024" />
+          <Input type="number" min={1900} max={2099} value={form.drinking_window_start ?? ''} onChange={(e) => set('drinking_window_start', e.target.value ? parseInt(e.target.value) : undefined)} placeholder="2024" />
         </div>
         <div className="space-y-1">
           <Label>
             Drink Through
             <ConfidenceHint field="drinking_window_end" confidence={aiConfidence} />
           </Label>
-          <Input type="number" min={2000} max={2099} value={form.drinking_window_end ?? ''} onChange={(e) => set('drinking_window_end', e.target.value ? parseInt(e.target.value) : undefined)} placeholder="2030" />
+          <Input type="number" min={1900} max={2099} value={form.drinking_window_end ?? ''} onChange={(e) => set('drinking_window_end', e.target.value ? parseInt(e.target.value) : undefined)} placeholder="2030" />
         </div>
       </div>
 
@@ -219,7 +262,7 @@ export function WineForm({ initial = {}, aiConfidence, sectionLabels, onSubmit, 
         <Textarea
           value={form.notes ?? ''}
           onChange={(e) => set('notes', e.target.value)}
-          placeholder="Personal notes..."
+          placeholder="Personal notes, gifted by, occasion..."
           rows={2}
         />
       </div>

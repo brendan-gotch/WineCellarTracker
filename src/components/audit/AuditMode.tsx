@@ -31,6 +31,7 @@ export function AuditMode({ wines }: Props) {
   const [streaming, setStreaming] = useState(false)
   const [pendingChanges, setPendingChanges] = useState<ProposedChange[]>([])
   const [applyingChanges, setApplyingChanges] = useState(false)
+  const [verifyMessage, setVerifyMessage] = useState('')
   const abortRef = useRef<AbortController | null>(null)
 
   const sectionWines = selectedSection === 'all'
@@ -39,7 +40,8 @@ export function AuditMode({ wines }: Props) {
 
   const handleVerifyAll = async () => {
     await Promise.all(sectionWines.map(w => markVerified(w.id)))
-    alert(`Marked ${sectionWines.length} wines as verified.`)
+    setVerifyMessage(`✓ Marked ${sectionWines.length} wines as verified`)
+    setTimeout(() => setVerifyMessage(''), 3000)
   }
 
   const sendMessage = async () => {
@@ -52,11 +54,13 @@ export function AuditMode({ wines }: Props) {
 
     abortRef.current = new AbortController()
     try {
+      // Truncate to last 20 messages to avoid context window overflow
+      const trimmedMessages = newMessages.slice(-20)
       const res = await fetch('/api/audit-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: newMessages,
+          messages: trimmedMessages,
           section: selectedSection,
           wines: sectionWines.map(w => ({ id: w.id, winery: w.winery, wine_name: w.wine_name, vintage: w.vintage, quantity_remaining: w.quantity_remaining })),
         }),
@@ -128,10 +132,13 @@ export function AuditMode({ wines }: Props) {
           <h1 className="text-2xl font-bold">Audit Cellar</h1>
           <p className="text-muted-foreground text-sm mt-0.5">Reconcile physical reality against your records</p>
         </div>
-        <Button variant="outline" onClick={handleVerifyAll}>
-          <CheckCircle2 className="h-4 w-4 mr-2" />
-          Mark All Verified
-        </Button>
+        <div className="flex items-center gap-3">
+          {verifyMessage && <span className="text-sm text-green-600 dark:text-green-400">{verifyMessage}</span>}
+          <Button variant="outline" onClick={handleVerifyAll}>
+            <CheckCircle2 className="h-4 w-4 mr-2" />
+            Mark All Verified
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-center gap-3">

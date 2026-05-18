@@ -40,10 +40,12 @@ TASKS:
    - If the user already provided a price, return it unchanged.
    - If you genuinely cannot find any pricing signal, return null.
 
-4. WHY INTERESTING — one sentence, under 25 words, only verified facts, no generic praise:
-   - One sharp specific detail beats three vague ones.
-   - Good examples: "Doug Nalle helped define Dry Creek Zinfandel's restrained style; tiny production, rarely seen outside the mailing list." / "Tony Coturri has farmed Sonoma biodynamically since the 1970s — production is tiny and nearly impossible to find." / "2000 was a perfect Sauternes vintage; d'Yquem made one of the most concentrated wines of the century."
-   - If you can't find a genuinely interesting specific fact, return null.
+4. WHY INTERESTING — one sentence, under 30 words, verified facts only:
+   - Answer: why would someone care about THIS wine over any other bottle? What makes it legendary, rare, or genuinely different?
+   - Think: producer's story, region's claim to fame, vintage significance, or what makes this wine impossible to replicate.
+   - The test: would this make someone lean in at a dinner table? If not, it's too generic — return null instead.
+   - Good examples: "Doug Nalle helped define Dry Creek Zinfandel's restrained style; tiny production, rarely seen outside the mailing list." / "Tony Coturri has farmed Sonoma biodynamically since the 1970s — nearly impossible to find outside the mailing list." / "2000 was a perfect Sauternes vintage; Château d'Yquem made one of the most concentrated wines of the century." / "Bedrock's site dates to 1888 — one of California's oldest continuously farmed vineyards, surviving Prohibition as a raisin operation."
+   - If you can't find a genuinely compelling specific fact, return null.
 
 5. CONFIDENCE SCORES 0.0–1.0 for every field. Use 0.7–0.8 for proxy-based estimates, 0.9+ for verified facts. Return null rather than low-confidence guesses for winery/wine_name.
 
@@ -94,6 +96,11 @@ Common patterns:
 For fields you're uncertain about, use null — but always return the winery and wine_name if you can parse them from the text, even if confidence is lower.
 Confidence scores: 1.0 = certain, 0.9 = very confident, 0.7–0.8 = likely, below 0.7 = uncertain.
 
+Also capture any personal notes the user mentioned (gifts, occasions, context) into the "notes" field. Examples:
+- "gift from Dom & Becca" → notes: "Gift from Dom & Becca"
+- "grabbed at the winery last weekend" → notes: "Grabbed at the winery"
+- "for the anniversary dinner" → notes: "For anniversary dinner"
+
 RESPOND WITH VALID JSON ONLY, no markdown, no explanation:
 {
   "wines": [
@@ -105,6 +112,7 @@ RESPOND WITH VALID JSON ONLY, no markdown, no explanation:
       "country": string | null,
       "region": string | null,
       "quantity": number,
+      "notes": string | null,
       "confidence": {
         "vintage": number,
         "winery": number,

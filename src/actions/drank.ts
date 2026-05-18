@@ -2,23 +2,29 @@
 
 import { db } from '@/db'
 import { drank_log, wines, type NewDrankLog } from '@/db/schema'
-import { eq, desc } from 'drizzle-orm'
+import { eq, desc, gt, and, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
+
+// Atomic decrement: single SQL update that only fires if quantity > 0
+async function decrementWine(wineId: string) {
+  return db
+    .update(wines)
+    .set({ quantity_remaining: sql`${wines.quantity_remaining} - 1`, updated_at: new Date() })
+    .where(and(eq(wines.id, wineId), gt(wines.quantity_remaining, 0)))
+    .returning({ id: wines.id })
+}
 
 export async function logDrank(data: Omit<NewDrankLog, 'id' | 'created_at'>) {
   const entry = await db.insert(drank_log).values(data).returning()
-
-  // Decrement quantity_remaining
-  const wine = await db.select().from(wines).where(eq(wines.id, data.wine_id)).limit(1)
-  if (wine[0] && wine[0].quantity_remaining > 0) {
-    await db
-      .update(wines)
-      .set({ quantity_remaining: wine[0].quantity_remaining - 1, updated_at: new Date() })
-      .where(eq(wines.id, data.wine_id))
-  }
-
+  await decrementWine(data.wine_id)
   revalidatePath('/')
   return entry[0]
+}
+
+// Remove a bottle without creating a drank log entry (broke it, gave it away, etc.)
+export async function removeBottle(wineId: string) {
+  await decrementWine(wineId)
+  revalidatePath('/')
 }
 
 export async function getDrankLog(wineId?: string) {

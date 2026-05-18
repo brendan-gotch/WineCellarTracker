@@ -11,12 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Search, SortAsc, Wine as WineIcon, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BASE_SECTION_LABELS } from '@/lib/cellar-sections'
+import { updateWine } from '@/actions/wines'
 
-type SortKey = 'vintage' | 'winery' | 'country' | 'region' | 'drinking_window_start' | 'priority' | 'quantity_remaining'
+type SortKey = 'vintage' | 'winery' | 'country' | 'region' | 'drinking_window_start' | 'quantity_remaining'
 type SortDir = 'asc' | 'desc'
-
-const PRIORITY_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 }
-const STATUS_ORDER = { overdue: 0, past_peak: 1, peak: 2, ready: 3, not_ready: 4, unknown: 5 }
 
 interface Props {
   wines: Wine[]
@@ -32,6 +30,10 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [drankWine, setDrankWine] = useState<Wine | null>(null)
   const [detailWine, setDetailWine] = useState<Wine | null>(null)
+
+  // Inline quantity editing
+  const [editingQtyId, setEditingQtyId] = useState<string | null>(null)
+  const [qtyAction, setQtyAction] = useState<'none' | 'decrement'>('none')
 
   const countries = useMemo(() => Array.from(new Set(wines.map((w) => w.country).filter(Boolean))).sort() as string[], [wines])
   const sections = useMemo(() => Array.from(new Set(wines.map((w) => w.cellar_section).filter(Boolean))).sort() as string[], [wines])
@@ -51,7 +53,12 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
       )
     }
 
-    if (filterStatus !== 'all') {
+    if (filterStatus === 'needs_drinking') {
+      list = list.filter((w) => {
+        const s = computeDrinkingStatus(w.drinking_window_start, w.drinking_window_end)
+        return s === 'past_peak' || s === 'overdue'
+      })
+    } else if (filterStatus !== 'all') {
       list = list.filter((w) => computeDrinkingStatus(w.drinking_window_start, w.drinking_window_end) === filterStatus)
     }
 
@@ -64,14 +71,7 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
     }
 
     list = [...list].sort((a, b) => {
-      let av: unknown, bv: unknown
-      if (sortKey === 'priority') {
-        av = PRIORITY_ORDER[a.priority ?? 'medium']
-        bv = PRIORITY_ORDER[b.priority ?? 'medium']
-      } else {
-        av = a[sortKey]
-        bv = b[sortKey]
-      }
+      const av = a[sortKey], bv = b[sortKey]
       if (av == null && bv == null) return 0
       if (av == null) return 1
       if (bv == null) return -1
@@ -92,13 +92,21 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
     return (s === 'past_peak' || s === 'overdue') && w.quantity_remaining > 0
   }).length
 
+  const handleIncrementQty = async (wine: Wine) => {
+    await updateWine(wine.id, { quantity_remaining: wine.quantity_remaining + 1 })
+    setEditingQtyId(null)
+    setQtyAction('none')
+  }
+
+  const isFiltered = search || filterStatus !== 'all' || filterCountry !== 'all' || filterSection !== 'all'
+
   return (
     <div className="space-y-4">
       {alertCount > 0 && (
         <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-800 dark:text-red-200">
           <AlertTriangle className="h-4 w-4 shrink-0" />
           <span><strong>{alertCount}</strong> {alertCount === 1 ? 'wine is' : 'wines are'} past their drinking window — time to pop some corks.</span>
-          <button className="ml-auto text-xs underline" onClick={() => setFilterStatus('past_peak')}>Show them</button>
+          <button className="ml-auto text-xs underline" onClick={() => setFilterStatus('needs_drinking')}>Show them</button>
         </div>
       )}
 
@@ -115,12 +123,13 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
         </div>
 
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectTrigger className="w-[150px]"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
             <SelectItem value="not_ready">Not Ready</SelectItem>
             <SelectItem value="ready">Ready</SelectItem>
             <SelectItem value="peak">Peak</SelectItem>
+            <SelectItem value="needs_drinking">Needs Drinking</SelectItem>
             <SelectItem value="past_peak">Past Peak</SelectItem>
             <SelectItem value="overdue">Overdue</SelectItem>
           </SelectContent>
@@ -153,7 +162,7 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
 
       {/* Summary */}
       <div className="text-sm text-muted-foreground">
-        {filtered.length} {filtered.length === 1 ? 'bottle' : 'wines'} · {filtered.reduce((s, w) => s + w.quantity_remaining, 0)} total bottles
+        {filtered.length} {filtered.length === 1 ? 'wine' : 'wines'} · {filtered.reduce((s, w) => s + w.quantity_remaining, 0)} bottles
       </div>
 
       {/* Table */}
@@ -176,36 +185,74 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
                 <tr>
                   <td colSpan={7} className="text-center py-12 text-muted-foreground">
                     <WineIcon className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                    {search || filterStatus !== 'all' || filterCountry !== 'all' ? 'No wines match your filters' : 'Your cellar is empty — add some wines!'}
+                    {isFiltered ? 'No wines match your filters' : 'Your cellar is empty — add some wines!'}
                   </td>
                 </tr>
               )}
               {filtered.map((wine) => {
                 const status = computeDrinkingStatus(wine.drinking_window_start, wine.drinking_window_end)
+                const isEditingQty = editingQtyId === wine.id
                 return (
                   <tr
                     key={wine.id}
-                    className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer group"
-                    onClick={() => setDetailWine(wine)}
+                    className="border-b border-border/50 hover:bg-muted/30 transition-colors group"
                   >
-                    <td className="px-3 py-3 font-mono text-muted-foreground">{wine.vintage ?? '—'}</td>
-                    <td className="px-3 py-3">
+                    <td className="px-3 py-3 font-mono text-muted-foreground cursor-pointer" onClick={() => setDetailWine(wine)}>{wine.vintage ?? '—'}</td>
+                    <td className="px-3 py-3 cursor-pointer" onClick={() => setDetailWine(wine)}>
                       <div className="font-medium">{wine.winery}</div>
                       <div className="text-muted-foreground text-xs">{wine.wine_name}{wine.varietal_blend ? ` · ${wine.varietal_blend}` : ''}</div>
                     </td>
-                    <td className="px-3 py-3 text-muted-foreground">{wine.country ?? '—'}</td>
-                    <td className="px-3 py-3 text-muted-foreground">{wine.region ?? '—'}</td>
-                    <td className="px-3 py-3">
+                    <td className="px-3 py-3 text-muted-foreground cursor-pointer" onClick={() => setDetailWine(wine)}>{wine.country ?? '—'}</td>
+                    <td className="px-3 py-3 text-muted-foreground cursor-pointer" onClick={() => setDetailWine(wine)}>{wine.region ?? '—'}</td>
+                    <td className="px-3 py-3 cursor-pointer" onClick={() => setDetailWine(wine)}>
                       <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium', DRINKING_STATUS_COLORS[status])}>
                         {DRINKING_STATUS_LABELS[status]}
                       </span>
                     </td>
-                    <td className="px-3 py-3 text-center font-medium">{wine.quantity_remaining}</td>
+                    <td className="px-3 py-3 text-center">
+                      {isEditingQty ? (
+                        <div className="flex flex-col items-center gap-1.5">
+                          {qtyAction === 'none' ? (
+                            <div className="flex items-center gap-1">
+                              <button
+                                className="w-6 h-6 rounded border border-border hover:bg-accent text-sm font-bold"
+                                onClick={() => setQtyAction('decrement')}
+                              >−</button>
+                              <span className="w-6 text-center font-medium">{wine.quantity_remaining}</span>
+                              <button
+                                className="w-6 h-6 rounded border border-border hover:bg-accent text-sm font-bold"
+                                onClick={() => handleIncrementQty(wine)}
+                              >+</button>
+                            </div>
+                          ) : (
+                            <div className="flex gap-1">
+                              <button
+                                className="text-xs px-2 py-1 rounded bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 hover:bg-rose-200 dark:hover:bg-rose-900/50"
+                                onClick={() => { setEditingQtyId(null); setQtyAction('none'); setDrankWine(wine) }}
+                              >🍷 Drank</button>
+                              <button
+                                className="text-xs px-2 py-1 rounded bg-muted hover:bg-accent"
+                                onClick={() => { setEditingQtyId(null); setQtyAction('none'); setDrankWine(wine) }}
+                              >📦 Remove</button>
+                            </div>
+                          )}
+                          <button className="text-xs text-muted-foreground hover:text-foreground" onClick={() => { setEditingQtyId(null); setQtyAction('none') }}>cancel</button>
+                        </div>
+                      ) : (
+                        <button
+                          className="font-medium hover:text-primary hover:underline"
+                          title="Click to adjust quantity"
+                          onClick={() => { setEditingQtyId(wine.id); setQtyAction('none') }}
+                        >
+                          {wine.quantity_remaining}
+                        </button>
+                      )}
+                    </td>
                     <td className="px-3 py-3">
                       <button
                         className="opacity-0 group-hover:opacity-100 transition-opacity text-lg hover:scale-110 transition-transform"
                         title="Mark as drank"
-                        onClick={(e) => { e.stopPropagation(); setDrankWine(wine) }}
+                        onClick={() => setDrankWine(wine)}
                       >
                         🍷
                       </button>
@@ -218,11 +265,12 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
         </div>
       </div>
 
+      {/* key prop ensures fresh state for each wine */}
       {drankWine && (
-        <DrankItDialog wine={drankWine} open={true} onClose={() => setDrankWine(null)} />
+        <DrankItDialog key={drankWine.id} wine={drankWine} open={true} onClose={() => setDrankWine(null)} />
       )}
       {detailWine && (
-        <WineDetailSheet wine={detailWine} open={true} onClose={() => setDetailWine(null)} onDrank={() => { setDetailWine(null); setDrankWine(detailWine) }} />
+        <WineDetailSheet key={detailWine.id} wine={detailWine} open={true} onClose={() => setDetailWine(null)} onDrank={() => { setDetailWine(null); setDrankWine(detailWine) }} />
       )}
     </div>
   )
