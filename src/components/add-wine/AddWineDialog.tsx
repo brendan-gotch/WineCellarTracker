@@ -77,7 +77,13 @@ export function AddWineDialog({ open, onClose }: Props) {
         body: JSON.stringify(wineData),
       })
       const enriched = await res.json()
-      setEnrichedData({ ...wineData, ...enriched, index })
+      // Parsed values always win — enrichment only fills in nulls
+      const merged: Record<string, unknown> = {}
+      const allKeys = Array.from(new Set([...Object.keys(wineData), ...Object.keys(enriched)]))
+      for (const key of allKeys) {
+        merged[key] = (wineData[key] !== null && wineData[key] !== undefined) ? wineData[key] : enriched[key]
+      }
+      setEnrichedData({ ...merged, index })
     } finally {
       setEnriching(false)
     }

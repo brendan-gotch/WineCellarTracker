@@ -16,6 +16,8 @@ TASK:
 3. For each field you fill in, provide a confidence score 0.0-1.0.
 4. If you're not confident about something, return null rather than guessing.
 
+Use web search to look up any wines you're not certain about before filling in fields.
+
 RESPOND WITH VALID JSON ONLY, no markdown, no explanation:
 {
   "vintage": number | null,
