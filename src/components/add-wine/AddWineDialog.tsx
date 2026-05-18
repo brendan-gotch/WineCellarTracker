@@ -233,36 +233,58 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
 
   const handleNaturalParse = async () => {
     if (!naturalText.trim()) return
+
+    const lines = naturalText.split('\n').map(l => l.trim()).filter(Boolean)
+    const MAX_WINES = 50
+    const BATCH_SIZE = 10
+
+    if (lines.length > MAX_WINES) {
+      setParseError(`That's a lot of wine! Please add at most ${MAX_WINES} at a time.`)
+      return
+    }
+
     setParsing(true)
     setParseError('')
     setWines([])
+
     try {
-      const res = await fetch('/api/parse-wine', {
-        method: 'POST',
-        headers: apiHeaders(),
-        body: JSON.stringify({ text: naturalText }),
-      })
-      const data = await res.json()
-      if (data.error === 'api_billing') { setApiError(data.message); return }
-      if (res.status === 401 || res.status === 403) {
-        setParseError('Authentication error — try refreshing the page.')
-        return
+      // Split into batches of BATCH_SIZE lines, parse in parallel
+      const batches: string[] = []
+      for (let i = 0; i < lines.length; i += BATCH_SIZE) {
+        batches.push(lines.slice(i, i + BATCH_SIZE).join('\n'))
       }
-      if (data.error === 'api_error') {
-        setParseError(`AI error: ${data.message ?? 'Unknown error'}. Please try again.`)
-        return
+
+      const batchResults = await Promise.all(batches.map(async (batchText) => {
+        const res = await fetch('/api/parse-wine', {
+          method: 'POST',
+          headers: apiHeaders(),
+          body: JSON.stringify({ text: batchText }),
+        })
+        return { res, data: await res.json() }
+      }))
+
+      for (const { res, data } of batchResults) {
+        if (data.error === 'api_billing') { setApiError(data.message); return }
+        if (res.status === 401 || res.status === 403) {
+          setParseError('Authentication error — try refreshing the page.')
+          return
+        }
+        if (data.error === 'api_error') {
+          setParseError(`AI error: ${data.message ?? 'Unknown error'}. Please try again.`)
+          return
+        }
       }
-      if (!data.wines?.length) {
+
+      const allWines = batchResults.flatMap(({ data }) => data.wines ?? [])
+      if (!allWines.length) {
         setParseError('Could not parse any wines. Try being more specific.')
         return
       }
 
-      const entries: WineEntry[] = data.wines.map((w: any, i: number) => {
-        // Map quantity → quantity_added / quantity_remaining
+      const entries: WineEntry[] = allWines.map((w: any, i: number) => {
         const qty = w.quantity ?? 1
         const parsed = { ...w, quantity_added: qty, quantity_remaining: qty }
         delete parsed.quantity
-
         return {
           id: `${Date.now()}-${i}`,
           parsed,
@@ -276,8 +298,8 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
       })
       setWines(entries)
 
-      // Enrich all in parallel — use entry IDs, not array indices, to avoid closure staleness
-      data.wines.forEach(async (w: any, i: number) => {
+      // Enrich all in parallel
+      allWines.forEach(async (w: any, i: number) => {
         const entryId = entries[i].id
         const qty = w.quantity ?? 1
         try {
