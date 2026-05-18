@@ -244,6 +244,10 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
       })
       const data = await res.json()
       if (data.error === 'api_billing') { setApiError(data.message); return }
+      if (res.status === 401 || res.status === 403) {
+        setParseError('Authentication error — try refreshing the page.')
+        return
+      }
       if (!data.wines?.length) {
         setParseError('Could not parse any wines. Try being more specific.')
         return
@@ -275,7 +279,7 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
         try {
           const res = await fetch('/api/enrich-wine', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: apiHeaders(),
             body: JSON.stringify({ ...w, quantity_added: qty, quantity_remaining: qty, _originalText: naturalText }),
           })
           const enriched = await res.json()
