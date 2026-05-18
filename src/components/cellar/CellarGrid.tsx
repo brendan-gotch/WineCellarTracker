@@ -58,12 +58,7 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
       )
     }
 
-    if (filterStatus === 'needs_drinking') {
-      list = list.filter((w) => {
-        const s = computeDrinkingStatus(w.drinking_window_start, w.drinking_window_end)
-        return s === 'past_peak' || s === 'overdue'
-      })
-    } else if (filterStatus !== 'all') {
+    if (filterStatus !== 'all') {
       list = list.filter((w) => computeDrinkingStatus(w.drinking_window_start, w.drinking_window_end) === filterStatus)
     }
 
@@ -115,7 +110,7 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
         <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-800 dark:text-red-200">
           <AlertTriangle className="h-4 w-4 shrink-0" />
           <span><strong>{alertCount}</strong> {alertCount === 1 ? 'wine is' : 'wines are'} past their drinking window — time to pop some corks.</span>
-          <button className="ml-auto text-xs underline" onClick={() => setFilterStatus('needs_drinking')}>Show them</button>
+          <button className="ml-auto text-xs underline" onClick={() => setFilterStatus('past_peak')}>Show them</button>
         </div>
       )}
 
@@ -138,7 +133,6 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
             <SelectItem value="not_ready">Not Ready</SelectItem>
             <SelectItem value="ready">Ready</SelectItem>
             <SelectItem value="peak">Peak</SelectItem>
-            <SelectItem value="needs_drinking">Needs Drinking</SelectItem>
             <SelectItem value="past_peak">Past Peak</SelectItem>
             <SelectItem value="overdue">Declining</SelectItem>
           </SelectContent>
