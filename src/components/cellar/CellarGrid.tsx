@@ -12,6 +12,10 @@ import { Search, SortAsc, Wine as WineIcon, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BASE_SECTION_LABELS } from '@/lib/cellar-sections'
 import { updateWine } from '@/actions/wines'
+import {
+  computeStickerColor, STICKER_COLORS, STICKER_YEAR_RANGES,
+  STICKER_ORDER, type StickerColor,
+} from '@/lib/cellar-stickers'
 
 type SortKey = 'vintage' | 'winery' | 'country' | 'region' | 'drinking_window_start' | 'quantity_remaining'
 type SortDir = 'asc' | 'desc'
@@ -26,6 +30,7 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterCountry, setFilterCountry] = useState('all')
   const [filterSection, setFilterSection] = useState('all')
+  const [filterSticker, setFilterSticker] = useState('all')
   const [sortKey, setSortKey] = useState<SortKey>('vintage')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [drankWine, setDrankWine] = useState<Wine | null>(null)
@@ -70,6 +75,10 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
       list = list.filter((w) => w.cellar_section === filterSection)
     }
 
+    if (filterSticker !== 'all') {
+      list = list.filter((w) => computeStickerColor(w.drinking_window_start, w.drinking_window_end) === filterSticker)
+    }
+
     list = [...list].sort((a, b) => {
       const av = a[sortKey], bv = b[sortKey]
       if (av == null && bv == null) return 0
@@ -80,7 +89,7 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
     })
 
     return list
-  }, [wines, search, filterStatus, filterCountry, filterSection, sortKey, sortDir])
+  }, [wines, search, filterStatus, filterCountry, filterSection, filterSticker, sortKey, sortDir])
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
@@ -98,7 +107,7 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
     setQtyAction('none')
   }
 
-  const isFiltered = search || filterStatus !== 'all' || filterCountry !== 'all' || filterSection !== 'all'
+  const isFiltered = search || filterStatus !== 'all' || filterCountry !== 'all' || filterSection !== 'all' || filterSticker !== 'all'
 
   return (
     <div className="space-y-4">
@@ -158,6 +167,29 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
             </SelectContent>
           </Select>
         )}
+
+        <Select value={filterSticker} onValueChange={setFilterSticker}>
+          <SelectTrigger className="w-[150px]">
+            {filterSticker === 'all'
+              ? <span className="text-muted-foreground">Sticker</span>
+              : <span className="flex items-center gap-2">
+                  <span className={cn('inline-block h-3 w-3 rounded-full', STICKER_COLORS[filterSticker as StickerColor])} />
+                  {STICKER_YEAR_RANGES[filterSticker as StickerColor]}
+                </span>
+            }
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Stickers</SelectItem>
+            {STICKER_ORDER.map(color => (
+              <SelectItem key={color} value={color}>
+                <span className="flex items-center gap-2">
+                  <span className={cn('inline-block h-3 w-3 rounded-full', STICKER_COLORS[color])} />
+                  {STICKER_YEAR_RANGES[color]}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Summary */}
@@ -171,6 +203,7 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
           <table className="w-full text-sm">
             <thead className="bg-muted/50 border-b border-border">
               <tr>
+                <th className="px-3 py-2.5 w-6" title="Optimal drinking window sticker" />
                 <SortHeader label="Vintage" sortKey="vintage" current={sortKey} dir={sortDir} onClick={toggleSort} />
                 <th className="text-left px-3 py-2.5 font-medium text-muted-foreground">Wine</th>
                 <SortHeader label="Country" sortKey="country" current={sortKey} dir={sortDir} onClick={toggleSort} />
@@ -183,7 +216,7 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
             <tbody>
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-muted-foreground">
+                  <td colSpan={8} className="text-center py-12 text-muted-foreground">
                     <WineIcon className="h-8 w-8 mx-auto mb-2 opacity-30" />
                     {isFiltered ? 'No wines match your filters' : 'Your cellar is empty — add some wines!'}
                   </td>
@@ -192,11 +225,22 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
               {filtered.map((wine) => {
                 const status = computeDrinkingStatus(wine.drinking_window_start, wine.drinking_window_end)
                 const isEditingQty = editingQtyId === wine.id
+                const sticker = computeStickerColor(wine.drinking_window_start, wine.drinking_window_end)
                 return (
                   <tr
                     key={wine.id}
                     className="border-b border-border/50 hover:bg-muted/30 transition-colors group"
                   >
+                    <td className="pl-3 py-3 w-6">
+                      {sticker ? (
+                        <span
+                          className={cn('inline-block h-3 w-3 rounded-full', STICKER_COLORS[sticker])}
+                          title={`Drink ${STICKER_YEAR_RANGES[sticker]}`}
+                        />
+                      ) : (
+                        <span className="inline-block h-3 w-3 rounded-full bg-border" title="No drinking window set" />
+                      )}
+                    </td>
                     <td className="px-3 py-3 font-mono text-muted-foreground cursor-pointer" onClick={() => setDetailWine(wine)}>{wine.vintage ?? '—'}</td>
                     <td className="px-3 py-3 cursor-pointer" onClick={() => setDetailWine(wine)}>
                       <div className="font-medium">{wine.winery}</div>

@@ -7,6 +7,8 @@ import { WineForm } from '@/components/add-wine/WineForm'
 import { updateWine, deleteWine } from '@/actions/wines'
 import { DrinkingStatusBadge } from './DrinkingStatusBadge'
 import type { Wine } from '@/db/schema'
+import { computeStickerColor, STICKER_COLORS, STICKER_YEAR_RANGES } from '@/lib/cellar-stickers'
+import { cn } from '@/lib/utils'
 
 interface Props {
   wine: Wine
@@ -36,7 +38,18 @@ export function WineDetailSheet({ wine, open, onClose, onDrank }: Props) {
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between pr-6">
             <span>{wine.vintage && `${wine.vintage} `}{wine.winery}</span>
-            <DrinkingStatusBadge windowStart={wine.drinking_window_start} windowEnd={wine.drinking_window_end} />
+            <div className="flex items-center gap-2">
+              {(() => {
+                const sticker = computeStickerColor(wine.drinking_window_start, wine.drinking_window_end)
+                return sticker ? (
+                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span className={cn('inline-block h-3 w-3 rounded-full', STICKER_COLORS[sticker])} />
+                    {STICKER_YEAR_RANGES[sticker]}
+                  </span>
+                ) : null
+              })()}
+              <DrinkingStatusBadge windowStart={wine.drinking_window_start} windowEnd={wine.drinking_window_end} />
+            </div>
           </DialogTitle>
           <p className="text-muted-foreground">{wine.wine_name}</p>
         </DialogHeader>
