@@ -34,7 +34,7 @@ export const DRINKING_STATUS_LABELS: Record<DrinkingStatus, string> = {
   ready: 'Ready',
   peak: 'Peak',
   past_peak: 'Past Peak',
-  overdue: 'Overdue',
+  overdue: 'Declining',
   unknown: 'Unknown',
 }
 

@@ -25,14 +25,31 @@ TASKS:
 
 1. FILL IN MISSING FIELDS: vintage, winery, wine_name, varietal_blend, country, region, cellar_section (1–10)
 
-2. DRINKING WINDOW — approach this like a Master Sommelier advising a client on when to open a bottle:
-   - Search for critic notes (Wine Spectator, Vinous, JancisRobinson, Wine Advocate), winery recommendations, and collector forum discussions for this specific wine and vintage.
-   - If exact wine+vintage data is scarce, proxy intelligently: same producer different vintage, same appellation/varietal/vintage from a comparable producer. State your proxy reasoning in your confidence level.
-   - Consider: tannin structure, acidity, vintage character (hot vs cool year), winery style (extracted vs elegant), format (magnums age 30–40% longer), appellation norms.
-   - drinking_window_start: earliest year the wine is pleasurable for most drinkers (may already be past if wine is old)
-   - drinking_window_end: latest year to drink before meaningful decline; be honest, not generous
-   - For wines already past their prime, set drinking_window_end to a past year so the system can flag them correctly.
-   - Always return a window. A well-reasoned proxy estimate beats null every time.
+2. DRINKING WINDOW — this is critical; use a rigorous multi-step research protocol:
+
+   STEP 1 — DIRECT LOOKUP: Search "[producer] [wine name] [vintage] drinking window" and "[producer] [wine name] [vintage] when to drink". Look for:
+     - Critic tasting notes with explicit drinking windows (Wine Spectator, Vinous, Wine Advocate, Jancis Robinson, CellarTracker)
+     - Winery's own recommendations on their website
+     - Sommelier forums (WSET, GuildSomm) and collector communities (Wine Berserkers, CellarTracker reviews)
+
+   STEP 2 — PROXY (if exact wine+vintage has sparse data): Search in this priority order:
+     a) Same producer, adjacent vintage (±1–2 years): adjust based on vintage quality difference
+     b) Same appellation + varietal + vintage: search "[region] [varietal] [vintage] drinking window"
+     c) Regional/varietal baseline: e.g. "Dry Creek Zinfandel drinking window" or "Barolo typical aging"
+     Always note which proxy you used by setting confidence to 0.7–0.8
+
+   STEP 3 — VINTAGE QUALITY ADJUSTMENT: Search "[region] [vintage] vintage quality" or "[vintage] vintage report [region]". Hot years = earlier drinking; cool structured years = longer aging.
+
+   STEP 4 — STYLE ADJUSTMENT: Consider the winery's documented style:
+     - Extracted/high-octane: typically shorter windows than critics suggest
+     - Elegant/restrained: often ages longer than expected
+     - Natural/minimal-intervention: often shorter shelf life
+     - Magnums/large format: add 30–40% to the window length
+
+   drinking_window_start: year the wine is pleasurable for most drinkers (can be a past year for already-open bottles)
+   drinking_window_end: honest last date before meaningful decline — not generous, not alarmist
+   For wines clearly past their prime: set drinking_window_end to a past year so the system flags them
+   ALWAYS return a window — a calibrated proxy beats null every time
 
 3. PRICE — estimate current retail/market price in USD if not provided:
    - Search for current retail prices, auction results, or winery direct prices.

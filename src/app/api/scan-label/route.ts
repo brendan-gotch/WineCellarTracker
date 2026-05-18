@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { anthropic } from '@/lib/anthropic'
 import { buildLabelScanPrompt } from '@/lib/wine-prompts'
+import { checkApiAuth } from '@/lib/api-auth'
 
 const VALID_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 const MAX_BASE64_LENGTH = 7_000_000 // ~5 MB decoded
 
 export async function POST(req: NextRequest) {
+  const authError = checkApiAuth(req)
+  if (authError) return authError
+
   const { image, mediaType } = await req.json()
   if (!image) return NextResponse.json({ error: 'No image provided' }, { status: 400 })
 
@@ -44,3 +48,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({})
   }
 }
+
+export const maxDuration = 60

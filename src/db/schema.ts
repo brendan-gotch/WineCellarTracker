@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, text, integer, real, index } from 'drizzle-orm/sqlite-core'
 import { sql } from 'drizzle-orm'
 
 export const BOTTLE_FORMATS = ['375ml', '750ml', '1.5L', '3L', '6L', '9L', '12L', 'other'] as const
@@ -31,7 +31,10 @@ export const wines = sqliteTable('wines', {
   last_verified:         integer('last_verified', { mode: 'timestamp' }),
   created_at:            integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
   updated_at:            integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
-})
+}, (t) => ({
+  cellarSectionIdx: index('wines_cellar_section_idx').on(t.cellar_section),
+  vintageIdx: index('wines_vintage_idx').on(t.vintage),
+}))
 
 export const drank_log = sqliteTable('drank_log', {
   id:         text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -41,7 +44,9 @@ export const drank_log = sqliteTable('drank_log', {
   notes:      text('notes'),
   occasion:   text('occasion'),
   created_at: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
-})
+}, (t) => ({
+  wineIdIdx: index('drank_log_wine_id_idx').on(t.wine_id),
+}))
 
 export type Wine = typeof wines.$inferSelect
 export type NewWine = typeof wines.$inferInsert

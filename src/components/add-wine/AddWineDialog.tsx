@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { WineForm } from './WineForm'
 import { createWine } from '@/actions/wines'
 import type { Wine } from '@/db/schema'
+import { apiHeaders } from '@/lib/api-auth'
 import { Camera, PenLine, MessageSquare, Loader2, AlertCircle, ChevronDown, ChevronUp, Check } from 'lucide-react'
 
 type Mode = 'choose' | 'manual' | 'scan' | 'natural'
@@ -67,6 +68,7 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
   const [parsing, setParsing] = useState(false)
   const [savingAll, setSavingAll] = useState(false)
   const [parseError, setParseError] = useState('')
+  const [apiError, setApiError] = useState('')   // billing / auth errors shown prominently
 
   // Scan state
   const [scannedData, setScannedData] = useState<any>(null)
@@ -105,6 +107,7 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
     setScanEnrichingBg(false)
     setScanDuplicate(null)
     setManualDuplicate(null)
+    setApiError('')
     stopCamera()
   }
 
@@ -171,11 +174,12 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
       // Step 1: Scan label (fast ~5s) — show form immediately
       const scanRes = await fetch('/api/scan-label', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: apiHeaders(),
         body: JSON.stringify({ image: base64, mediaType }),
       })
       const scanned = await scanRes.json()
 
+      if (scanned.error === 'api_billing') { setApiError(scanned.message); setScanLoading(false); return }
       if (scanned.error) {
         setCameraError(scanned.error)
         setScanLoading(false)
@@ -235,10 +239,11 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
     try {
       const res = await fetch('/api/parse-wine', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: apiHeaders(),
         body: JSON.stringify({ text: naturalText }),
       })
       const data = await res.json()
+      if (data.error === 'api_billing') { setApiError(data.message); return }
       if (!data.wines?.length) {
         setParseError('Could not parse any wines. Try being more specific.')
         return
@@ -356,6 +361,14 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
             {mode === 'scan' && 'Label Scan'}
           </DialogTitle>
         </DialogHeader>
+
+        {/* API billing/auth error */}
+        {apiError && (
+          <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-md text-sm text-red-800 dark:text-red-200">
+            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+            <div><strong>API Error:</strong> {apiError}</div>
+          </div>
+        )}
 
         {/* Choose mode */}
         {mode === 'choose' && (

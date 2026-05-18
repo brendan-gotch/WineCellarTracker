@@ -131,7 +131,7 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
             <SelectItem value="peak">Peak</SelectItem>
             <SelectItem value="needs_drinking">Needs Drinking</SelectItem>
             <SelectItem value="past_peak">Past Peak</SelectItem>
-            <SelectItem value="overdue">Overdue</SelectItem>
+            <SelectItem value="overdue">Declining</SelectItem>
           </SelectContent>
         </Select>
 

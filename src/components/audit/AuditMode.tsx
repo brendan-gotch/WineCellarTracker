@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { updateWine, markVerified } from '@/actions/wines'
 import { logDrank } from '@/actions/drank'
+import { apiHeaders } from '@/lib/api-auth'
 import { DrinkingStatusBadge } from '@/components/cellar/DrinkingStatusBadge'
 import { CheckCircle2, Send, Loader2 } from 'lucide-react'
 import { format } from 'date-fns'
@@ -58,11 +59,10 @@ export function AuditMode({ wines }: Props) {
       const trimmedMessages = newMessages.slice(-20)
       const res = await fetch('/api/audit-chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: apiHeaders(),
         body: JSON.stringify({
           messages: trimmedMessages,
           section: selectedSection,
-          wines: sectionWines.map(w => ({ id: w.id, winery: w.winery, wine_name: w.wine_name, vintage: w.vintage, quantity_remaining: w.quantity_remaining })),
         }),
         signal: abortRef.current.signal,
       })
