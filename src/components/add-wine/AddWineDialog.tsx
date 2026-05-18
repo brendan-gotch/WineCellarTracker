@@ -248,6 +248,10 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
         setParseError('Authentication error — try refreshing the page.')
         return
       }
+      if (data.error === 'api_error') {
+        setParseError(`AI error: ${data.message ?? 'Unknown error'}. Please try again.`)
+        return
+      }
       if (!data.wines?.length) {
         setParseError('Could not parse any wines. Try being more specific.')
         return
