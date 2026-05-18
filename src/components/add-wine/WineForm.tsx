@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { BOTTLE_FORMATS, PRIORITIES } from '@/db/schema'
+import { BOTTLE_FORMATS } from '@/db/schema'
 import type { Wine } from '@/db/schema'
 import { cn } from '@/lib/utils'
 
@@ -119,15 +119,6 @@ export function WineForm({ initial = {}, aiConfidence, onSubmit, submitLabel = '
             <ConfidenceHint field="varietal_blend" confidence={aiConfidence} />
           </Label>
           <Input value={form.varietal_blend ?? ''} onChange={(e) => set('varietal_blend', e.target.value)} placeholder="Pinot Noir" />
-        </div>
-        <div className="space-y-1">
-          <Label>Priority</Label>
-          <Select value={form.priority ?? 'medium'} onValueChange={(v) => set('priority', v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</SelectItem>)}
-            </SelectContent>
-          </Select>
         </div>
       </div>
 

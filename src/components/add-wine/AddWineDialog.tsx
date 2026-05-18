@@ -218,20 +218,25 @@ export function AddWineDialog({ open, onClose }: Props) {
                 Claude is filling in the details...
               </div>
             )}
-            {!enriching && enrichedData?.why_interesting && (
-              <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md text-sm">
-                <span className="font-medium text-amber-800 dark:text-amber-200">✨ Why interesting: </span>
-                <span className="text-amber-700 dark:text-amber-300">{enrichedData.why_interesting}</span>
-              </div>
+            {!enriching && (
+              <>
+                {enrichedData?.why_interesting && (
+                  <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md text-sm">
+                    <span className="font-medium text-amber-800 dark:text-amber-200">✨ Why interesting: </span>
+                    <span className="text-amber-700 dark:text-amber-300">{enrichedData.why_interesting}</span>
+                  </div>
+                )}
+                <WineForm
+                  key={`${mode}-${enrichedData?.index ?? 'manual'}`}
+                  initial={currentInitial}
+                  aiConfidence={enrichedData?.ai_confidence}
+                  onSubmit={handleSaveWine}
+                  submitLabel={parsedWines.length > 1 && currentParsedIndex < parsedWines.length - 1
+                    ? `Save & Add Next (${currentParsedIndex + 2}/${parsedWines.length})`
+                    : 'Save Wine'}
+                />
+              </>
             )}
-            <WineForm
-              initial={currentInitial}
-              aiConfidence={enrichedData?.ai_confidence}
-              onSubmit={handleSaveWine}
-              submitLabel={parsedWines.length > 1 && currentParsedIndex < parsedWines.length - 1
-                ? `Save & Add Next (${currentParsedIndex + 2}/${parsedWines.length})`
-                : 'Save Wine'}
-            />
           </div>
         )}
       </DialogContent>

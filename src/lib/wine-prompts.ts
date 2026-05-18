@@ -16,9 +16,10 @@ ${JSON.stringify(cellarContext.slice(0, 20), null, 2)}
 
 TASK:
 1. Fill in any missing fields from: vintage, winery, wine_name, varietal_blend, country, region, drinking_window_start, drinking_window_end
-2. Write a 2-3 sentence "why_interesting" about why this wine matters / why someone should care about it. Be specific and compelling, not generic.
+2. Write a "why_interesting" — 1-2 short, punchy sentences. RULES: only include facts you are certain about. No speculation, no filler phrases like "this wine is known for" or "a testament to." Lead with what's specific and interesting: the producer's story, what makes the vintage special, why this wine is hard to get, what makes it unusual. If you don't have enough certain facts, write less rather than speculating. Examples of good why_interesting: "Made by Laura Carpenter, a female winemaker specializing in French Pinot Noir clones." / "Tony Coturri has been farming Sonoma biodynamically since the 1970s — tiny production, almost impossible to find." / "2000 was a perfect Sauternes vintage; d'Yquem produced one of the most concentrated and long-lived wines of the century."
 3. For each field you fill in, provide a confidence score 0.0-1.0.
 4. If you're not confident about something, return null rather than guessing.
+5. Use web search to verify facts before writing why_interesting.
 
 Use web search to look up any wines you're not certain about before filling in fields.
 

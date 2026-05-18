@@ -26,22 +26,23 @@
     --radius: 0.5rem;
   }
 
+  /* Squid ink dark mode — dark slate blue, not pitch black */
   .dark {
-    --background: 20 14.3% 4.1%;
-    --foreground: 0 0% 95%;
-    --muted: 0 0% 15%;
-    --muted-foreground: 240 5% 64.9%;
-    --popover: 0 0% 9%;
-    --popover-foreground: 0 0% 95%;
-    --card: 24 9.8% 10%;
-    --card-foreground: 0 0% 95%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
+    --background: 213 28% 11%;
+    --foreground: 210 20% 92%;
+    --muted: 213 22% 18%;
+    --muted-foreground: 213 15% 55%;
+    --popover: 213 26% 14%;
+    --popover-foreground: 210 20% 92%;
+    --card: 213 24% 14%;
+    --card-foreground: 210 20% 92%;
+    --border: 213 20% 22%;
+    --input: 213 20% 22%;
     --primary: 346 77% 55%;
     --primary-foreground: 355 100% 97%;
-    --secondary: 240 3.7% 15.9%;
+    --secondary: 213 20% 20%;
     --secondary-foreground: 0 0% 98%;
-    --accent: 12 6.5% 15.1%;
+    --accent: 213 20% 20%;
     --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 85.7% 97.3%;
@@ -52,4 +53,10 @@
 @layer base {
   * { @apply border-border; }
   body { @apply bg-background text-foreground font-sans antialiased; }
+}
+
+/* Softer placeholders — clearly example text, not real data */
+input::placeholder,
+textarea::placeholder {
+  opacity: 0.35;
 }
