@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Search, SortAsc, Wine as WineIcon, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { SECTION_COUNT, BASE_SECTION_LABELS } from '@/lib/cellar-sections'
+import { BASE_SECTION_LABELS } from '@/lib/cellar-sections'
 
 type SortKey = 'vintage' | 'winery' | 'country' | 'region' | 'drinking_window_start' | 'priority' | 'quantity_remaining'
 type SortDir = 'asc' | 'desc'

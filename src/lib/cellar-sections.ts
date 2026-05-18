@@ -15,6 +15,20 @@ export const BASE_SECTION_LABELS: Record<number, string> = {
   10: 'Big / Age-Worthy Reds',
 }
 
+// Shown when a section has no wines yet
+const SECTION_EXAMPLE_LABELS: Record<number, string> = {
+  1: '1 — Sparkling (Champagne, Pét-Nat)',
+  2: '2 — Light Whites (Pinot Grigio, Muscadet)',
+  3: '3 — Medium Whites (Sauvignon Blanc, Grüner)',
+  4: '4 — Full Whites (Chardonnay, Viognier)',
+  5: '5 — Light Reds (Gamay, light Pinot Noir)',
+  6: '6 — Medium Reds (Grenache, richer Pinot Noir)',
+  7: '7 — Medium Reds (Sangiovese, Tempranillo)',
+  8: '8 — Medium-Full Reds (Zinfandel, GSM)',
+  9: '9 — Full Reds (Cab Sauvignon, Syrah)',
+  10: '10 — Big Reds (Barolo, Brunello, Amarone)',
+}
+
 export const SECTION_STYLE_GUIDE = `
 Cellar sections 1-10 (assign one number):
 1 = Sparkling (Champagne, Prosecco, Cava, Pét-Nat)
@@ -48,7 +62,7 @@ export function computeSectionLabels(wines: Wine[]): Record<number, string> {
   for (let i = 1; i <= 10; i++) {
     const varietals = bySection[i] ?? []
     if (varietals.length === 0) {
-      labels[i] = `${i} — ${BASE_SECTION_LABELS[i]}`
+      labels[i] = SECTION_EXAMPLE_LABELS[i]
     } else {
       // Top 2 by frequency
       const freq: Record<string, number> = {}
