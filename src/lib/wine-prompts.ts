@@ -1,6 +1,9 @@
+import { SECTION_STYLE_GUIDE } from './cellar-sections'
+
 export function buildEnrichmentPrompt(
   known: Record<string, unknown>,
-  cellarContext: Array<{ winery: string; region: string | null; varietal_blend: string | null; why_interesting: string | null }>
+  cellarContext: Array<{ winery: string; region: string | null; varietal_blend: string | null; why_interesting: string | null }>,
+  sectionCounts?: Record<number, number>
 ) {
   const originalText = known._originalText ? `\nORIGINAL USER INPUT: "${known._originalText}"\nThe winery, wine name, and vintage in the original input are ground truth — do not change them.\n` : ''
   const cleanKnown = { ...known }
@@ -14,12 +17,26 @@ ${JSON.stringify(cleanKnown, null, 2)}
 USER'S CELLAR CONTEXT (their taste profile):
 ${JSON.stringify(cellarContext.slice(0, 20), null, 2)}
 
+CELLAR SECTION SYSTEM:
+${SECTION_STYLE_GUIDE}
+${sectionCounts ? `Current bottle counts per section: ${JSON.stringify(sectionCounts)}. Try to distribute evenly — avoid suggesting a section that already has significantly more bottles than others.` : ''}
+
 TASK:
-1. Fill in any missing fields from: vintage, winery, wine_name, varietal_blend, country, region, drinking_window_start, drinking_window_end
+1. Fill in any missing fields from: vintage, winery, wine_name, varietal_blend, country, region, drinking_window_start, drinking_window_end, cellar_section (suggest the right number 1-10)
 2. Write a "why_interesting" — maximum 2 sentences, ideally 1. Under 30 words total. Only verified facts — no speculation, no generic praise. One sharp, specific detail is better than three vague ones. Good examples: "Doug Nalle helped define Dry Creek Zinfandel's restrained style; tiny production, rarely seen outside the mailing list." / "Tony Coturri has farmed Sonoma biodynamically since the 1970s — production is tiny and nearly impossible to find." / "2000 was a perfect Sauternes vintage; d'Yquem made one of the most concentrated wines of the century." If you can't find a genuinely interesting specific fact, return null.
 3. For each field you fill in, provide a confidence score 0.0-1.0.
 4. If you're not confident about something, return null rather than guessing.
 5. Use web search to verify facts before writing why_interesting.
+
+DRINKING WINDOW — this is critical. Approach it like a Master Sommelier:
+- Search for critic notes, winery advice, and forum discussions about this specific wine and vintage.
+- If the exact wine+vintage isn't found, proxy intelligently: same producer different vintage, same appellation/varietal/vintage, comparable producer in same region. Adjust accordingly.
+- Consider: structure (tannin, acid), vintage quality (e.g. a hot year means earlier drinking), winery style (extracted vs elegant), format (magnums age longer).
+- drinking_window_start = earliest year the wine will be pleasurable for most drinkers (it may already be in window if vintage is old)
+- drinking_window_end = the year by which the wine should ideally be consumed; be realistic, not overly generous
+- Never leave drinking window null if you can make a confident proxy-based estimate. A well-reasoned proxy window is better than null.
+- When using a proxy, bias confidence slightly lower (0.7-0.8) but still provide the window.
+- For wines already past their likely peak, set drinking_window_end to a past year so the system flags them correctly.
 
 Use web search to look up any wines you're not certain about before filling in fields.
 
@@ -33,6 +50,7 @@ RESPOND WITH VALID JSON ONLY, no markdown, no explanation:
   "region": string | null,
   "drinking_window_start": number | null,
   "drinking_window_end": number | null,
+  "cellar_section": string | null,
   "why_interesting": string | null,
   "ai_confidence": {
     "vintage": number,
@@ -43,6 +61,7 @@ RESPOND WITH VALID JSON ONLY, no markdown, no explanation:
     "region": number,
     "drinking_window_start": number,
     "drinking_window_end": number,
+    "cellar_section": number,
     "why_interesting": number
   }
 }`

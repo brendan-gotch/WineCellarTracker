@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Search, SortAsc, Wine as WineIcon, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { SECTION_COUNT, BASE_SECTION_LABELS } from '@/lib/cellar-sections'
 
 type SortKey = 'vintage' | 'winery' | 'country' | 'region' | 'drinking_window_start' | 'priority' | 'quantity_remaining'
 type SortDir = 'asc' | 'desc'
@@ -19,9 +20,10 @@ const STATUS_ORDER = { overdue: 0, past_peak: 1, peak: 2, ready: 3, not_ready: 4
 
 interface Props {
   wines: Wine[]
+  sectionLabels?: Record<number, string>
 }
 
-export function CellarGrid({ wines }: Props) {
+export function CellarGrid({ wines, sectionLabels }: Props) {
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterCountry, setFilterCountry] = useState('all')
@@ -136,10 +138,14 @@ export function CellarGrid({ wines }: Props) {
 
         {sections.length > 0 && (
           <Select value={filterSection} onValueChange={setFilterSection}>
-            <SelectTrigger className="w-[140px]"><SelectValue placeholder="Section" /></SelectTrigger>
+            <SelectTrigger className="w-[160px]"><SelectValue placeholder="Section" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Sections</SelectItem>
-              {sections.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              {sections.map((s) => {
+                const num = parseInt(s)
+                const label = sectionLabels?.[num] ?? (BASE_SECTION_LABELS[num] ? `${num} — ${BASE_SECTION_LABELS[num]}` : s)
+                return <SelectItem key={s} value={s}>{label}</SelectItem>
+              })}
             </SelectContent>
           </Select>
         )}
