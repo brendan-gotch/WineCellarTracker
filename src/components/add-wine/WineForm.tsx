@@ -24,10 +24,12 @@ interface Props {
 
 function ConfidenceHint({ field, confidence }: { field: string; confidence?: Record<string, number> }) {
   if (!confidence || confidence[field] === undefined || confidence[field] >= 0.9) return null
-  const pct = Math.round((confidence[field] ?? 0) * 100)
+  const score = confidence[field] ?? 0
+  const label = score >= 0.6 ? 'medium confidence' : 'low confidence'
+  const color = score >= 0.6 ? 'text-amber-500 dark:text-amber-400' : 'text-red-500 dark:text-red-400'
   return (
-    <span className="ml-1 text-xs text-amber-600 dark:text-amber-400" title={`AI confidence: ${pct}%`}>
-      ~{pct}% confident
+    <span className={`ml-1 text-xs ${color}`}>
+      {label}
     </span>
   )
 }
