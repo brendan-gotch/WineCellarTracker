@@ -17,7 +17,9 @@ import {
   STICKER_ORDER, type StickerColor,
 } from '@/lib/cellar-stickers'
 
-type SortKey = 'vintage' | 'winery' | 'country' | 'region' | 'drinking_window_start' | 'quantity_remaining'
+type SortKey = 'vintage' | 'winery' | 'country' | 'region' | 'drinking_window_start' | 'quantity_remaining' | 'format' | 'status' | 'sticker'
+
+const STATUS_ORDER: Record<string, number> = { not_ready: 0, ready: 1, peak: 2, past_peak: 3, overdue: 4 }
 type SortDir = 'asc' | 'desc'
 
 interface Props {
@@ -75,7 +77,19 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
     }
 
     list = [...list].sort((a, b) => {
-      const av = a[sortKey], bv = b[sortKey]
+      let av: any, bv: any
+      if (sortKey === 'status') {
+        av = STATUS_ORDER[computeDrinkingStatus(a.drinking_window_start, a.drinking_window_end)] ?? 0
+        bv = STATUS_ORDER[computeDrinkingStatus(b.drinking_window_start, b.drinking_window_end)] ?? 0
+      } else if (sortKey === 'sticker') {
+        const sa = computeStickerColor(a.drinking_window_start, a.drinking_window_end)
+        const sb = computeStickerColor(b.drinking_window_start, b.drinking_window_end)
+        av = sa != null ? STICKER_ORDER.indexOf(sa) : 999
+        bv = sb != null ? STICKER_ORDER.indexOf(sb) : 999
+      } else {
+        av = a[sortKey as keyof Wine]
+        bv = b[sortKey as keyof Wine]
+      }
       if (av == null && bv == null) return 0
       if (av == null) return 1
       if (bv == null) return -1
@@ -197,12 +211,13 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
           <table className="w-full text-sm">
             <thead className="bg-muted/50 border-b border-border">
               <tr>
-                <th className="px-3 py-2.5 w-8" title="Optimal drinking window sticker" />
+                <SortHeader label="" sortKey="sticker" current={sortKey} dir={sortDir} onClick={toggleSort} className="w-8 px-3" title="Sort by drinking window" />
                 <SortHeader label="Vintage" sortKey="vintage" current={sortKey} dir={sortDir} onClick={toggleSort} />
-                <th className="text-left px-3 py-2.5 font-medium text-muted-foreground w-[40%]">Wine</th>
+                <SortHeader label="Wine" sortKey="winery" current={sortKey} dir={sortDir} onClick={toggleSort} className="w-[38%]" />
                 <SortHeader label="Country" sortKey="country" current={sortKey} dir={sortDir} onClick={toggleSort} />
                 <SortHeader label="Region" sortKey="region" current={sortKey} dir={sortDir} onClick={toggleSort} />
-                <th className="text-left px-3 py-2.5 font-medium text-muted-foreground">Status</th>
+                <SortHeader label="Size" sortKey="format" current={sortKey} dir={sortDir} onClick={toggleSort} />
+                <SortHeader label="Status" sortKey="status" current={sortKey} dir={sortDir} onClick={toggleSort} />
                 <SortHeader label="Qty" sortKey="quantity_remaining" current={sortKey} dir={sortDir} onClick={toggleSort} />
                 <th className="px-3 py-2.5" />
               </tr>
@@ -210,7 +225,7 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
             <tbody>
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-muted-foreground">
+                  <td colSpan={9} className="text-center py-12 text-muted-foreground">
                     <WineIcon className="h-8 w-8 mx-auto mb-2 opacity-30" />
                     {isFiltered ? 'No wines match your filters' : 'Your cellar is empty — add some wines!'}
                   </td>
@@ -242,6 +257,7 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
                     </td>
                     <td className="px-3 py-3 text-muted-foreground cursor-pointer" onClick={() => setDetailWine(wine)}>{wine.country ?? '—'}</td>
                     <td className="px-3 py-3 text-muted-foreground cursor-pointer" onClick={() => setDetailWine(wine)}>{wine.region ?? '—'}</td>
+                    <td className="px-3 py-3 text-muted-foreground cursor-pointer whitespace-nowrap" onClick={() => setDetailWine(wine)}>{wine.format ?? '—'}</td>
                     <td className="px-3 py-3 cursor-pointer" onClick={() => setDetailWine(wine)}>
                       <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium', DRINKING_STATUS_COLORS[status])}>
                         {DRINKING_STATUS_LABELS[status]}
@@ -314,16 +330,18 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
   )
 }
 
-function SortHeader({ label, sortKey, current, dir, onClick }: {
+function SortHeader({ label, sortKey, current, dir, onClick, className, title }: {
   label: string
   sortKey: SortKey
   current: SortKey
   dir: SortDir
   onClick: (k: SortKey) => void
+  className?: string
+  title?: string
 }) {
   const active = current === sortKey
   return (
-    <th className="text-left px-3 py-2.5 font-medium text-muted-foreground">
+    <th className={cn('text-left px-3 py-2.5 font-medium text-muted-foreground', className)} title={title}>
       <button
         className={cn('flex items-center gap-1 hover:text-foreground transition-colors', active && 'text-foreground')}
         onClick={() => onClick(sortKey)}
