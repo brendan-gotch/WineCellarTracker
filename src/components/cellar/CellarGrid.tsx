@@ -203,9 +203,9 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
           <table className="w-full text-sm">
             <thead className="bg-muted/50 border-b border-border">
               <tr>
-                <th className="px-3 py-2.5 w-6" title="Optimal drinking window sticker" />
+                <th className="px-3 py-2.5 w-8" title="Optimal drinking window sticker" />
                 <SortHeader label="Vintage" sortKey="vintage" current={sortKey} dir={sortDir} onClick={toggleSort} />
-                <th className="text-left px-3 py-2.5 font-medium text-muted-foreground">Wine</th>
+                <th className="text-left px-3 py-2.5 font-medium text-muted-foreground w-[40%]">Wine</th>
                 <SortHeader label="Country" sortKey="country" current={sortKey} dir={sortDir} onClick={toggleSort} />
                 <SortHeader label="Region" sortKey="region" current={sortKey} dir={sortDir} onClick={toggleSort} />
                 <th className="text-left px-3 py-2.5 font-medium text-muted-foreground">Status</th>
@@ -231,20 +231,20 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
                     key={wine.id}
                     className="border-b border-border/50 hover:bg-muted/30 transition-colors group"
                   >
-                    <td className="pl-3 py-3 w-6">
+                    <td className="pl-3 py-3 w-8">
                       {sticker ? (
                         <span
-                          className={cn('inline-block h-3 w-3 rounded-full', STICKER_COLORS[sticker])}
+                          className={cn('inline-block h-3.5 w-3.5 rounded-full shrink-0', STICKER_COLORS[sticker])}
                           title={`Drink ${STICKER_YEAR_RANGES[sticker]}`}
                         />
                       ) : (
-                        <span className="inline-block h-3 w-3 rounded-full bg-border" title="No drinking window set" />
+                        <span className="inline-block h-3.5 w-3.5 rounded-full bg-border shrink-0" title="No drinking window set" />
                       )}
                     </td>
                     <td className="px-3 py-3 font-mono text-muted-foreground cursor-pointer" onClick={() => setDetailWine(wine)}>{wine.vintage ?? '—'}</td>
-                    <td className="px-3 py-3 cursor-pointer" onClick={() => setDetailWine(wine)}>
-                      <div className="font-medium">{wine.winery}</div>
-                      <div className="text-muted-foreground text-xs">{wine.wine_name}{wine.varietal_blend ? ` · ${wine.varietal_blend}` : ''}</div>
+                    <td className="px-3 py-3 cursor-pointer max-w-0 w-[40%]" onClick={() => setDetailWine(wine)}>
+                      <div className="font-medium truncate">{wine.winery}</div>
+                      <div className="text-muted-foreground text-xs truncate">{wine.wine_name}{wine.varietal_blend ? ` · ${wine.varietal_blend}` : ''}</div>
                     </td>
                     <td className="px-3 py-3 text-muted-foreground cursor-pointer" onClick={() => setDetailWine(wine)}>{wine.country ?? '—'}</td>
                     <td className="px-3 py-3 text-muted-foreground cursor-pointer" onClick={() => setDetailWine(wine)}>{wine.region ?? '—'}</td>
