@@ -57,7 +57,7 @@ export function AddWineDialog({ open, onClose }: Props) {
         setParsedWines(data.wines)
         setCurrentParsedIndex(0)
         // Auto-enrich the first wine
-        await enrichWine(data.wines[0], 0)
+        await enrichWine(data.wines[0], 0, naturalText)
       } else {
         setParseError('Could not parse any wines from that description. Try being more specific.')
       }
@@ -68,13 +68,13 @@ export function AddWineDialog({ open, onClose }: Props) {
     }
   }
 
-  const enrichWine = async (wineData: any, index: number) => {
+  const enrichWine = async (wineData: any, index: number, originalText?: string) => {
     setEnriching(true)
     try {
       const res = await fetch('/api/enrich-wine', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(wineData),
+        body: JSON.stringify({ ...wineData, _originalText: originalText }),
       })
       const enriched = await res.json()
       // Parsed values always win — enrichment only fills in nulls

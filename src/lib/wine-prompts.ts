@@ -2,10 +2,14 @@ export function buildEnrichmentPrompt(
   known: Record<string, unknown>,
   cellarContext: Array<{ winery: string; region: string | null; varietal_blend: string | null; why_interesting: string | null }>
 ) {
-  return `You are a world-class sommelier and wine expert. A user is building a wine cellar tracker and needs you to fill in missing details about a wine and write a "why interesting" note.
+  const originalText = known._originalText ? `\nORIGINAL USER INPUT: "${known._originalText}"\nThe winery, wine name, and vintage in the original input are ground truth — do not change them.\n` : ''
+  const cleanKnown = { ...known }
+  delete cleanKnown._originalText
 
-KNOWN INFORMATION:
-${JSON.stringify(known, null, 2)}
+  return `You are a world-class sommelier and wine expert. A user is building a wine cellar tracker and needs you to fill in missing details about a wine and write a "why interesting" note.
+${originalText}
+KNOWN INFORMATION (parsed from user input — treat non-null values as facts):
+${JSON.stringify(cleanKnown, null, 2)}
 
 USER'S CELLAR CONTEXT (their taste profile):
 ${JSON.stringify(cellarContext.slice(0, 20), null, 2)}

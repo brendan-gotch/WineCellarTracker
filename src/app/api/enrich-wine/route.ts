@@ -7,6 +7,8 @@ export async function POST(req: NextRequest) {
   const known = await req.json()
   const cellarContext = await getCellarContext()
 
+  const prompt = buildEnrichmentPrompt(known, cellarContext)
+
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 2048,
@@ -16,7 +18,7 @@ export async function POST(req: NextRequest) {
         name: 'web_search',
       },
     ],
-    messages: [{ role: 'user', content: buildEnrichmentPrompt(known, cellarContext) }],
+    messages: [{ role: 'user', content: prompt }],
   })
 
   // Find the final text block (after any tool use)
