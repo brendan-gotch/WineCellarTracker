@@ -38,11 +38,20 @@ export function AddWineDialog({ open, onClose }: Props) {
 
   // Camera state
   const [cameraActive, setCameraActive] = useState(false)
+  const [cameraRequested, setCameraRequested] = useState(false)
   const [cameraError, setCameraError] = useState('')
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+
+  // Start camera only after the video element is in the DOM
+  useEffect(() => {
+    if (cameraRequested && videoRef.current && !cameraActive) {
+      setCameraRequested(false)
+      startCamera()
+    }
+  }, [cameraRequested, cameraActive])
 
   const reset = () => {
     setMode('choose')
@@ -250,7 +259,7 @@ export function AddWineDialog({ open, onClose }: Props) {
               </div>
             </button>
 
-            <button onClick={() => { setMode('scan'); if (!isMobile) startCamera() }} className="w-full flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-accent transition-colors text-left">
+            <button onClick={() => { setMode('scan'); if (!isMobile) setCameraRequested(true) }} className="w-full flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-accent transition-colors text-left">
               <Camera className="h-5 w-5 text-muted-foreground shrink-0" />
               <div>
                 <div className="font-medium">Scan Label</div>
@@ -364,18 +373,19 @@ export function AddWineDialog({ open, onClose }: Props) {
             {/* Desktop camera */}
             {!isMobile && !scannedData && (
               <div className="space-y-3">
-                {cameraActive ? (
-                  <div className="space-y-3">
-                    <div className="relative rounded-lg overflow-hidden bg-black aspect-video">
-                      <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
-                      <canvas ref={canvasRef} className="hidden" />
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" onClick={stopCamera}>Cancel</Button>
-                      <Button onClick={captureFrame} className="flex-1">📸 Capture Label</Button>
-                    </div>
+                {/* Video always in DOM so ref is ready before startCamera runs */}
+                <div className={cameraActive ? 'space-y-3' : 'hidden'}>
+                  <div className="relative rounded-lg overflow-hidden bg-black aspect-video">
+                    <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
+                    <canvas ref={canvasRef} className="hidden" />
                   </div>
-                ) : (
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={stopCamera}>Cancel</Button>
+                    <Button onClick={captureFrame} className="flex-1">📸 Capture Label</Button>
+                  </div>
+                </div>
+
+                {!cameraActive && (
                   <div className="space-y-2">
                     {cameraError && (
                       <div className="text-sm text-destructive flex items-center gap-2">
