@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { BOTTLE_FORMATS } from '@/db/schema'
 import type { Wine } from '@/db/schema'
+import { SECTION_COUNT, BASE_SECTION_LABELS } from '@/lib/cellar-sections'
 import { cn } from '@/lib/utils'
 
 type WineFormData = Partial<Omit<Wine, 'id' | 'created_at' | 'updated_at' | 'last_verified'>> & {
@@ -18,6 +19,7 @@ type WineFormData = Partial<Omit<Wine, 'id' | 'created_at' | 'updated_at' | 'las
 interface Props {
   initial?: Partial<WineFormData>
   aiConfidence?: Record<string, number>
+  sectionLabels?: Record<number, string>
   onSubmit: (data: WineFormData) => Promise<void>
   submitLabel?: string
 }
@@ -34,7 +36,7 @@ function ConfidenceHint({ field, confidence }: { field: string; confidence?: Rec
   )
 }
 
-export function WineForm({ initial = {}, aiConfidence, onSubmit, submitLabel = 'Save Wine' }: Props) {
+export function WineForm({ initial = {}, aiConfidence, sectionLabels, onSubmit, submitLabel = 'Save Wine' }: Props) {
   const [form, setForm] = useState<WineFormData>({
     winery: '',
     wine_name: '',
@@ -159,8 +161,25 @@ export function WineForm({ initial = {}, aiConfidence, onSubmit, submitLabel = '
       </div>
 
       <div className="space-y-1">
-        <Label>Cellar Section</Label>
-        <Input value={form.cellar_section ?? ''} onChange={(e) => set('cellar_section', e.target.value)} placeholder="Rack A, Row 3" />
+        <Label>
+          Cellar Section
+          <ConfidenceHint field="cellar_section" confidence={aiConfidence} />
+        </Label>
+        <Select
+          value={form.cellar_section ?? ''}
+          onValueChange={(v) => set('cellar_section', v)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select section..." />
+          </SelectTrigger>
+          <SelectContent>
+            {Array.from({ length: SECTION_COUNT }, (_, i) => i + 1).map((n) => (
+              <SelectItem key={n} value={String(n)}>
+                {sectionLabels?.[n] ?? `${n} — ${BASE_SECTION_LABELS[n]}`}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-1">

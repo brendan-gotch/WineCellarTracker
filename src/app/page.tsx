@@ -3,9 +3,11 @@ export const dynamic = 'force-dynamic'
 import { getWines } from '@/actions/wines'
 import { CellarGrid } from '@/components/cellar/CellarGrid'
 import { AddWineButton } from '@/components/add-wine/AddWineButton'
+import { computeSectionLabels } from '@/lib/cellar-sections'
 
 export default async function HomePage() {
   const wines = await getWines()
+  const sectionLabels = computeSectionLabels(wines)
 
   return (
     <div className="space-y-6">
@@ -16,9 +18,9 @@ export default async function HomePage() {
             {wines.filter(w => w.quantity_remaining > 0).length} wines · {wines.reduce((s, w) => s + w.quantity_remaining, 0)} bottles
           </p>
         </div>
-        <AddWineButton />
+        <AddWineButton sectionLabels={sectionLabels} />
       </div>
-      <CellarGrid wines={wines} />
+      <CellarGrid wines={wines} sectionLabels={sectionLabels} />
     </div>
   )
 }

@@ -13,6 +13,7 @@ type Mode = 'choose' | 'manual' | 'scan' | 'natural'
 interface Props {
   open: boolean
   onClose: () => void
+  sectionLabels?: Record<number, string>
 }
 
 interface WineEntry {
@@ -25,7 +26,7 @@ interface WineEntry {
   saved: boolean
 }
 
-export function AddWineDialog({ open, onClose }: Props) {
+export function AddWineDialog({ open, onClose, sectionLabels }: Props) {
   const [mode, setMode] = useState<Mode>('choose')
   const [naturalText, setNaturalText] = useState('')
   const [wines, setWines] = useState<WineEntry[]>([])
@@ -338,6 +339,7 @@ export function AddWineDialog({ open, onClose }: Props) {
                       key={wine.id}
                       initial={wine.formData}
                       aiConfidence={wine.enriched?.ai_confidence}
+                      sectionLabels={sectionLabels}
                       onSubmit={async (data) => { updateFormData(wine.id, data); toggleExpanded(wine.id) }}
                       submitLabel="Done ✓"
                     />
@@ -432,6 +434,7 @@ export function AddWineDialog({ open, onClose }: Props) {
                   key="scan"
                   initial={scanEnriched}
                   aiConfidence={scanEnriched.ai_confidence}
+                sectionLabels={sectionLabels}
                   onSubmit={handleSaveScanned}
                   submitLabel="Save Wine"
                 />
@@ -449,6 +452,7 @@ export function AddWineDialog({ open, onClose }: Props) {
           <div className="py-2">
             <WineForm
               key="manual"
+              sectionLabels={sectionLabels}
               initial={{}}
               onSubmit={async (formData) => {
                 const res = await fetch('/api/enrich-wine', {
