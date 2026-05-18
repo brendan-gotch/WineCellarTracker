@@ -60,7 +60,7 @@ export function WineDetailSheet({ wine, open, onClose, onDrank }: Props) {
               <Detail label="Varietal / Blend" value={wine.varietal_blend} />
               <Detail label="Country" value={wine.country} />
               <Detail label="Region" value={wine.region} />
-              <Detail label="Format" value={wine.format} />
+              <Detail label="Format" value={wine.format ?? '750ml'} />
               <Detail label="Bottles Remaining" value={`${wine.quantity_remaining} of ${wine.quantity_added}`} />
               <Detail label="Cellar Section" value={wine.cellar_section} />
               <Detail label="Drinking Window" value={wine.drinking_window_start ? `${wine.drinking_window_start}–${wine.drinking_window_end ?? '?'}` : null} />

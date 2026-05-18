@@ -257,7 +257,7 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
                     </td>
                     <td className="px-3 py-3 text-muted-foreground cursor-pointer" onClick={() => setDetailWine(wine)}>{wine.country ?? '—'}</td>
                     <td className="px-3 py-3 text-muted-foreground cursor-pointer" onClick={() => setDetailWine(wine)}>{wine.region ?? '—'}</td>
-                    <td className="px-3 py-3 text-muted-foreground cursor-pointer whitespace-nowrap" onClick={() => setDetailWine(wine)}>{wine.format ?? '—'}</td>
+                    <td className="px-3 py-3 text-muted-foreground cursor-pointer whitespace-nowrap" onClick={() => setDetailWine(wine)}>{wine.format ?? '750ml'}</td>
                     <td className="px-3 py-3 cursor-pointer" onClick={() => setDetailWine(wine)}>
                       <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium', DRINKING_STATUS_COLORS[status])}>
                         {DRINKING_STATUS_LABELS[status]}
