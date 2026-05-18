@@ -75,15 +75,19 @@ export function AddWineDialog({ open, onClose, sectionLabels }: Props) {
   const startCamera = async () => {
     setCameraError('')
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      // Desktop (Mac) only has a front-facing camera — don't constrain facingMode
+      const constraints = isMobile
+        ? { video: { facingMode: 'environment' } }
+        : { video: { width: { ideal: 1920 }, height: { ideal: 1080 } } }
+      const stream = await navigator.mediaDevices.getUserMedia(constraints)
       streamRef.current = stream
       if (videoRef.current) {
         videoRef.current.srcObject = stream
-        videoRef.current.play()
+        await videoRef.current.play().catch(() => {})
       }
       setCameraActive(true)
     } catch {
-      setCameraError('Could not access camera. Try uploading a photo instead.')
+      setCameraError('Could not access camera. Check browser permissions or upload a photo instead.')
     }
   }
 
