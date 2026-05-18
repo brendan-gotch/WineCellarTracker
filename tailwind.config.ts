@@ -6,6 +6,13 @@ const config: Config = {
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/lib/**/*.{js,ts,jsx,tsx}',
+  ],
+  safelist: [
+    'bg-red-500', 'bg-orange-500', 'bg-yellow-400', 'bg-green-500',
+    'bg-sky-400', 'bg-blue-700', 'bg-purple-600', 'bg-fuchsia-500',
+    'border-red-500', 'border-orange-500', 'border-yellow-400', 'border-green-500',
+    'border-sky-400', 'border-blue-700', 'border-purple-600', 'border-fuchsia-500',
   ],
   theme: {
     extend: {
