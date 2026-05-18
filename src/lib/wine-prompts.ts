@@ -46,15 +46,18 @@ export function buildNaturalLanguageParsePrompt(input: string) {
 
 INPUT: "${input}"
 
-Parse this into one or more wine entries. Common patterns:
+Parse this into one or more wine entries. Always return at least one entry — even if the wine is obscure or you only know partial info, extract whatever you can.
+
+Common patterns:
 - "arnot roberts pinot 2018" → one wine
 - "arnot roberts pinot 2018, der keil 2022, teutonic pinot meunier 2024 - 3 bottles" → three wines, last has 3 bottles
 - "6 bottles of 2019 Kistler Chardonnay Les Noisetiers" → one wine, 6 bottles
+- "2021 Miles Garrett Dragon Field Blend" → one wine, winery=Miles Garrett, wine_name=Dragon, varietal_blend=Field Blend
 
-For each wine, return what you know with high confidence. Use null for anything uncertain.
-Confidence scores: 1.0 = certain, 0.9 = very confident, 0.7-0.8 = likely, below 0.7 = uncertain (use null instead).
+For fields you're uncertain about, use null — but always return the winery and wine_name if you can parse them from the text, even if confidence is lower.
+Confidence scores: 1.0 = certain, 0.9 = very confident, 0.7-0.8 = likely, below 0.7 = uncertain.
 
-RESPOND WITH VALID JSON ONLY:
+RESPOND WITH VALID JSON ONLY, no markdown, no explanation:
 {
   "wines": [
     {
