@@ -299,13 +299,13 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
                         <span className="inline-block h-3.5 w-3.5 rounded-full bg-border shrink-0" title="No drinking window set" />
                       )}
                     </td>
-                    <td className="px-3 py-3 font-mono text-muted-foreground" onClick={e => e.stopPropagation()}>
-                      {wine.non_vintage
+                    <td className="px-3 py-3 font-mono text-muted-foreground">
+                      {wine.non_vintage ?? false
                         ? <span className="text-xs font-semibold">NV</span>
                         : <InlineEdit value={wine.vintage} type="number" onSave={save(wine.id, 'vintage')} />
                       }
                     </td>
-                    <td className="px-3 py-3 max-w-0 w-[32%]" onClick={e => e.stopPropagation()}>
+                    <td className="px-3 py-3 max-w-0 w-[32%]">
                       <div className="font-medium truncate">
                         <InlineEdit value={wine.winery} onSave={save(wine.id, 'winery')} />
                       </div>
@@ -317,13 +317,13 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
                         />
                       </div>
                     </td>
-                    <td className="px-3 py-3 text-muted-foreground" onClick={e => e.stopPropagation()}>
+                    <td className="px-3 py-3 text-muted-foreground">
                       <InlineEdit value={wine.country} onSave={save(wine.id, 'country')} />
                     </td>
-                    <td className="px-3 py-3 text-muted-foreground" onClick={e => e.stopPropagation()}>
+                    <td className="px-3 py-3 text-muted-foreground">
                       <InlineEdit value={wine.region} onSave={save(wine.id, 'region')} />
                     </td>
-                    <td className="px-3 py-3 text-muted-foreground whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                    <td className="px-3 py-3 text-muted-foreground whitespace-nowrap">
                       <InlineEdit value={wine.format ?? '750ml'} onSave={save(wine.id, 'format')} />
                     </td>
                     <td className="px-3 py-3">
@@ -331,7 +331,7 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
                         {DRINKING_STATUS_LABELS[status]}
                       </span>
                     </td>
-                    <td className="px-3 py-3 text-muted-foreground" onClick={e => e.stopPropagation()}>
+                    <td className="px-3 py-3 text-muted-foreground">
                       <InlineEdit
                         value={wine.price}
                         type="number"
@@ -339,23 +339,23 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
                         display={wine.price != null ? `$${wine.price % 1 === 0 ? wine.price : wine.price.toFixed(2)}` : undefined}
                       />
                     </td>
-                    <td className="px-3 py-3 text-center" onClick={e => e.stopPropagation()}>
-                      <div className="flex flex-col items-center gap-0.5">
-                        <InlineEdit
-                          value={wine.quantity_remaining}
-                          type="number"
-                          onSave={save(wine.id, 'quantity_remaining')}
-                          className="font-medium"
-                        />
-                        <button
-                          className="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-rose-500 hover:text-rose-700 leading-none"
-                          onClick={() => setDrankWine(wine)}
-                        >
-                          🍷
-                        </button>
-                      </div>
+                    <td className="px-3 py-3 text-center">
+                      <InlineEdit
+                        value={wine.quantity_remaining}
+                        type="number"
+                        onSave={save(wine.id, 'quantity_remaining')}
+                        className="font-medium"
+                      />
                     </td>
-                    <td className="px-3 py-3 w-8" />
+                    <td className="px-3 py-3 w-8 text-center" onClick={e => e.stopPropagation()}>
+                      <button
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-base leading-none"
+                        title="Drank it"
+                        onClick={() => setDrankWine(wine)}
+                      >
+                        🍷
+                      </button>
+                    </td>
                   </tr>
                 )
               })}

@@ -9,6 +9,8 @@ import { DrinkingStatusBadge } from './DrinkingStatusBadge'
 import type { Wine } from '@/db/schema'
 import { computeStickerColor, STICKER_COLORS, STICKER_YEAR_RANGES } from '@/lib/cellar-stickers'
 import { cn } from '@/lib/utils'
+import { apiHeaders } from '@/lib/api-auth'
+import { RefreshCw } from 'lucide-react'
 
 interface Props {
   wine: Wine
@@ -20,6 +22,28 @@ interface Props {
 export function WineDetailSheet({ wine, open, onClose, onDrank }: Props) {
   const [editing, setEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [refreshingFact, setRefreshingFact] = useState(false)
+  const [localFact, setLocalFact] = useState<string | null | undefined>(undefined)
+
+  const displayFact = localFact !== undefined ? localFact : wine.why_interesting
+
+  const refreshFact = async () => {
+    setRefreshingFact(true)
+    try {
+      const res = await fetch('/api/enrich-wine', {
+        method: 'POST',
+        headers: apiHeaders(),
+        body: JSON.stringify({ ...wine, _refreshFact: true }),
+      })
+      const data = await res.json()
+      if (data.why_interesting) {
+        setLocalFact(data.why_interesting)
+        await updateWine(wine.id, { why_interesting: data.why_interesting })
+      }
+    } finally {
+      setRefreshingFact(false)
+    }
+  }
 
   const handleUpdate = async (data: any) => {
     await updateWine(wine.id, data)
@@ -37,7 +61,7 @@ export function WineDetailSheet({ wine, open, onClose, onDrank }: Props) {
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between pr-6">
-            <span>{wine.non_vintage ? 'NV ' : wine.vintage ? `${wine.vintage} ` : ''}{wine.winery}</span>
+            <span>{(wine.non_vintage ?? false) ? 'NV ' : wine.vintage ? `${wine.vintage} ` : ''}{wine.winery}</span>
             <div className="flex items-center gap-2">
               {(() => {
                 const sticker = computeStickerColor(wine.drinking_window_start, wine.drinking_window_end)
@@ -67,15 +91,23 @@ export function WineDetailSheet({ wine, open, onClose, onDrank }: Props) {
               <Detail label="Price" value={wine.price != null ? `$${wine.price % 1 === 0 ? wine.price : wine.price.toFixed(2)}` : null} />
             </div>
 
-            {wine.why_interesting && (
-              <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md text-sm">
-                <div className="font-medium text-amber-800 dark:text-amber-200 mb-1">✨ Why interesting</div>
-                <p className="text-amber-700 dark:text-amber-300">{wine.why_interesting}</p>
-                {wine.ai_confidence?.why_interesting && wine.ai_confidence.why_interesting < 0.95 && (
-                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">AI-generated · edit if needed</p>
-                )}
+            <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md text-sm">
+              <div className="flex items-center justify-between mb-1">
+                <div className="font-medium text-amber-800 dark:text-amber-200">✨ Why interesting</div>
+                <button
+                  onClick={refreshFact}
+                  disabled={refreshingFact}
+                  className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 disabled:opacity-40 transition-colors"
+                  title="Refresh this fact"
+                >
+                  <RefreshCw className={cn('h-3.5 w-3.5', refreshingFact && 'animate-spin')} />
+                </button>
               </div>
-            )}
+              {displayFact
+                ? <p className="text-amber-700 dark:text-amber-300">{displayFact}</p>
+                : <p className="text-amber-600/60 dark:text-amber-400/60 italic">No interesting fact yet — click ↻ to generate one.</p>
+              }
+            </div>
 
             {wine.notes && (
               <div>
