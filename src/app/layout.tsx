@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { ThemeProvider } from 'next-themes'
 import { TopNav } from '@/components/layout/TopNav'
+import { AdminAlerts } from '@/components/layout/AdminAlerts'
 import { getSession } from '@/lib/session'
 import './globals.css'
 
@@ -20,6 +21,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <TopNav username={session?.username} />
+          {session?.username === process.env.ADMIN_USERNAME && <AdminAlerts />}
           <main className="max-w-7xl mx-auto px-4 py-6">
             {children}
           </main>

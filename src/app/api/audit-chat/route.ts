@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { anthropic } from '@/lib/anthropic'
 import { buildAuditPrompt } from '@/lib/wine-prompts'
 import { checkApiAuth } from '@/lib/api-auth'
+import { logSystemAlert } from '@/lib/alerts'
 import { db } from '@/db'
 import { wines } from '@/db/schema'
 import { eq, gt, and } from 'drizzle-orm'
@@ -54,6 +55,7 @@ export async function POST(req: NextRequest) {
     })
   } catch (err: any) {
     const isBillingError = err?.status === 402 || err?.message?.toLowerCase().includes('credit')
+    if (isBillingError) void logSystemAlert('anthropic', 'Anthropic API key issue or insufficient credits. Visit console.anthropic.com to check billing.')
     return NextResponse.json(
       { error: isBillingError ? 'api_billing' : 'api_error', message: err?.message ?? 'Chat failed' },
       { status: isBillingError ? 402 : 500 }

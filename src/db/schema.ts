@@ -58,8 +58,17 @@ export const drank_log = sqliteTable('drank_log', {
   wineIdIdx: index('drank_log_wine_id_idx').on(t.wine_id),
 }))
 
+export const system_alerts = sqliteTable('system_alerts', {
+  id:         text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  service:    text('service').notNull(), // 'anthropic' | 'vercel' | 'turso'
+  message:    text('message').notNull(),
+  created_at: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+  dismissed:  integer('dismissed', { mode: 'boolean' }).notNull().default(false),
+})
+
 export type Wine = typeof wines.$inferSelect
 export type NewWine = typeof wines.$inferInsert
 export type DrankLog = typeof drank_log.$inferSelect
 export type NewDrankLog = typeof drank_log.$inferInsert
 export type User = typeof users.$inferSelect
+export type SystemAlert = typeof system_alerts.$inferSelect

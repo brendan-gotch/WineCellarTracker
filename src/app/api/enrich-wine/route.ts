@@ -3,6 +3,7 @@ import { anthropic } from '@/lib/anthropic'
 import { buildEnrichmentPrompt } from '@/lib/wine-prompts'
 import { getCellarContext, getSectionCounts } from '@/actions/wines'
 import { checkApiAuth } from '@/lib/api-auth'
+import { logSystemAlert } from '@/lib/alerts'
 
 export const maxDuration = 120
 
@@ -34,6 +35,7 @@ export async function POST(req: NextRequest) {
     const isAuthError = err?.status === 401 || err?.status === 403
     const isBillingError = err?.status === 402 || err?.message?.toLowerCase().includes('credit') || err?.message?.toLowerCase().includes('billing')
     if (isAuthError || isBillingError) {
+      void logSystemAlert('anthropic', 'Anthropic API key issue or insufficient credits. Visit console.anthropic.com to check billing.')
       return NextResponse.json({ error: 'api_billing', message: 'Anthropic API key issue or insufficient credits. Check your API key and billing.' }, { status: 402 })
     }
     return NextResponse.json({ error: 'api_error', message: err?.message ?? 'Enrichment failed' }, { status: 500 })

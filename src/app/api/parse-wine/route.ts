@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { anthropic } from '@/lib/anthropic'
 import { buildNaturalLanguageParsePrompt } from '@/lib/wine-prompts'
 import { checkApiAuth } from '@/lib/api-auth'
+import { logSystemAlert } from '@/lib/alerts'
 
 export async function POST(req: NextRequest) {
   const authError = checkApiAuth(req)
@@ -29,6 +30,7 @@ export async function POST(req: NextRequest) {
     const isAuthError = err?.status === 401 || err?.status === 403
     const isBillingError = err?.status === 402 || err?.message?.toLowerCase().includes('credit') || err?.message?.toLowerCase().includes('billing')
     if (isAuthError || isBillingError) {
+      void logSystemAlert('anthropic', 'Anthropic API key issue or insufficient credits. Visit console.anthropic.com to check billing.')
       return NextResponse.json({ error: 'api_billing', message: 'Anthropic API key issue or insufficient credits.' }, { status: 402 })
     }
     return NextResponse.json({ wines: [], error: 'api_error', message: err?.message ?? 'Unknown error' })
