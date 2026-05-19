@@ -348,7 +348,7 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
                     <td className="px-3 py-3 text-muted-foreground whitespace-nowrap">
                       <InlineEdit value={wine.format ?? '750ml'} onSave={save(wine.id, 'format')} />
                     </td>
-                    <td className="px-3 py-3">
+                    <td className="px-3 py-3 whitespace-nowrap">
                       <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium', DRINKING_STATUS_COLORS[status])}>
                         {DRINKING_STATUS_LABELS[status]}
                       </span>
