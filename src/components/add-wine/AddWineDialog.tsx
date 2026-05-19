@@ -40,6 +40,24 @@ function findDuplicate(existing: Wine[], winery: string, wine_name: string, vint
   ) ?? null
 }
 
+// Strip common winery suffixes for fuzzy matching
+function normWinery(name: string): string {
+  return name.toLowerCase().replace(/\s+(winery|wines?|cellars?|estate|vineyards?|co\.?|company)\s*$/i, '').trim()
+}
+
+// If a parsed winery name is a close match for one already in the cellar, use the canonical name
+function canonicalizeWinery(suggested: string, existingWineries: string[]): string {
+  if (!suggested) return suggested
+  const normSuggested = normWinery(suggested)
+  for (const existing of existingWineries) {
+    const normExisting = normWinery(existing)
+    if (normExisting === normSuggested || normExisting.startsWith(normSuggested) || normSuggested.startsWith(normExisting)) {
+      return existing
+    }
+  }
+  return suggested
+}
+
 // Resize image to max 1280px on longest side before upload (big win for iPhone photos)
 async function resizeImage(base64: string, mimeType: string): Promise<string> {
   return new Promise((resolve) => {
@@ -310,6 +328,9 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
           })
           const enriched = await res.json()
           const merged = mergeData({ ...w, quantity_added: qty, quantity_remaining: qty }, enriched)
+          if (typeof merged.winery === 'string') {
+            merged.winery = canonicalizeWinery(merged.winery, existingWines.map(e => e.winery))
+          }
           setWines(prev => prev.map(e => e.id === entryId
             ? { ...e, enriched: merged, formData: merged, enriching: false }
             : e
