@@ -68,15 +68,22 @@ export function AnalyticsDashboard({ wines, drankLog }: Props) {
     ? (drankLog.filter(d => d.rating).reduce((s, d) => s + (d.rating ?? 0), 0) / drankLog.filter(d => d.rating).length).toFixed(1)
     : '—'
 
+  const pricedWines = activeWines.filter(w => w.price != null)
+  const cellarValue = pricedWines.reduce((s, w) => s + (w.price ?? 0) * w.quantity_remaining, 0)
+  const pricedBottles = pricedWines.reduce((s, w) => s + w.quantity_remaining, 0)
+  const avgPricePerBottle = pricedBottles > 0 ? cellarValue / pricedBottles : null
+
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-bold">Analytics</h1>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         <StatCard label="Wines in cellar" value={activeWines.length} />
         <StatCard label="Total bottles" value={totalBottles} />
         <StatCard label="Bottles consumed" value={drankLog.length} />
         <StatCard label="Avg rating" value={avgRating} />
+        <StatCard label="Cellar value" value={`$${cellarValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`} />
+        <StatCard label="Avg $ / bottle" value={avgPricePerBottle != null ? `$${avgPricePerBottle.toFixed(2)}` : '—'} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
