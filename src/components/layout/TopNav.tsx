@@ -9,9 +9,10 @@ import { Button } from '@/components/ui/button'
 
 interface Props {
   username?: string
+  isAdmin?: boolean
 }
 
-export function TopNav({ username }: Props) {
+export function TopNav({ username, isAdmin }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const { theme, setTheme } = useTheme()
@@ -20,6 +21,7 @@ export function TopNav({ username }: Props) {
     { href: '/', label: 'Cellar' },
     { href: '/analytics', label: 'Analytics' },
     { href: '/audit', label: 'Audit' },
+    ...(isAdmin ? [{ href: '/admin', label: 'Admin' }] : []),
   ]
 
   const logout = async () => {

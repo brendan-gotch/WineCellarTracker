@@ -13,6 +13,7 @@ export const users = sqliteTable('users', {
   id:            text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   username:      text('username').notNull().unique(),
   password_hash: text('password_hash').notNull(),
+  last_seen:     integer('last_seen', { mode: 'timestamp' }),
   created_at:    integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
 })
 
