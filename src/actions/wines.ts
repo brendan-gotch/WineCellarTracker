@@ -63,7 +63,7 @@ export async function getCellarContext() {
     .select({ winery: wines.winery, region: wines.region, varietal_blend: wines.varietal_blend, why_interesting: wines.why_interesting })
     .from(wines)
     .where(eq(wines.user_id, userId))
-    .orderBy(desc(wines.created_at))
+    .orderBy(desc(wines.quantity_remaining), desc(wines.created_at))
     .limit(30)
 }
 
