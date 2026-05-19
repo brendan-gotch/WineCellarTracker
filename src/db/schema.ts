@@ -9,8 +9,16 @@ export type BottleFormat = typeof BOTTLE_FORMATS[number]
 export type Priority = typeof PRIORITIES[number]
 export type DrinkingStatus = typeof DRINKING_STATUSES[number]
 
+export const users = sqliteTable('users', {
+  id:            text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  username:      text('username').notNull().unique(),
+  password_hash: text('password_hash').notNull(),
+  created_at:    integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+})
+
 export const wines = sqliteTable('wines', {
   id:                    text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  user_id:               text('user_id').references(() => users.id),
   vintage:               integer('vintage'),
   winery:                text('winery').notNull(),
   wine_name:             text('wine_name').notNull(),
@@ -34,10 +42,12 @@ export const wines = sqliteTable('wines', {
 }, (t) => ({
   cellarSectionIdx: index('wines_cellar_section_idx').on(t.cellar_section),
   vintageIdx: index('wines_vintage_idx').on(t.vintage),
+  userIdx: index('wines_user_id_idx').on(t.user_id),
 }))
 
 export const drank_log = sqliteTable('drank_log', {
   id:         text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  user_id:    text('user_id').references(() => users.id),
   wine_id:    text('wine_id').notNull().references(() => wines.id, { onDelete: 'cascade' }),
   date_drank: integer('date_drank', { mode: 'timestamp' }).notNull(),
   rating:     real('rating'),
@@ -52,3 +62,4 @@ export type Wine = typeof wines.$inferSelect
 export type NewWine = typeof wines.$inferInsert
 export type DrankLog = typeof drank_log.$inferSelect
 export type NewDrankLog = typeof drank_log.$inferInsert
+export type User = typeof users.$inferSelect

@@ -1,14 +1,19 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Moon, Sun } from 'lucide-react'
+import { Moon, Sun, LogOut } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { Button } from '@/components/ui/button'
 
-export function TopNav() {
+interface Props {
+  username?: string
+}
+
+export function TopNav({ username }: Props) {
   const pathname = usePathname()
+  const router = useRouter()
   const { theme, setTheme } = useTheme()
 
   const links = [
@@ -16,6 +21,12 @@ export function TopNav() {
     { href: '/analytics', label: 'Analytics' },
     { href: '/audit', label: 'Audit' },
   ]
+
+  const logout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' })
+    router.push('/login')
+    router.refresh()
+  }
 
   return (
     <header className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40">
@@ -41,15 +52,25 @@ export function TopNav() {
             ))}
           </nav>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          aria-label="Toggle theme"
-        >
-          <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-          <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-        </Button>
+        <div className="flex items-center gap-2">
+          {username && (
+            <span className="text-sm text-muted-foreground hidden sm:block">{username}</span>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            aria-label="Toggle theme"
+          >
+            <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+            <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+          </Button>
+          {username && (
+            <Button variant="ghost" size="icon" onClick={logout} aria-label="Sign out">
+              <LogOut className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
     </header>
   )
