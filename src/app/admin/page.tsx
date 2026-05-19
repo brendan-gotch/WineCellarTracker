@@ -28,6 +28,8 @@ export default async function AdminPage() {
       last_seen: users.last_seen,
       wines: sql<number>`count(distinct ${wines.id})`,
       bottles: sql<number>`coalesce(sum(${wines.quantity_remaining}), 0)`,
+      cellar_value: sql<number>`coalesce(sum(${wines.price} * ${wines.quantity_remaining}), 0)`,
+      priced_bottles: sql<number>`coalesce(sum(case when ${wines.price} is not null then ${wines.quantity_remaining} else 0 end), 0)`,
     })
     .from(users)
     .leftJoin(wines, eq(wines.user_id, users.id))
@@ -35,9 +37,17 @@ export default async function AdminPage() {
     .orderBy(desc(users.created_at))
 
   const totals = userStats.reduce(
-    (acc, u) => ({ users: acc.users + 1, wines: acc.wines + Number(u.wines), bottles: acc.bottles + Number(u.bottles) }),
-    { users: 0, wines: 0, bottles: 0 }
+    (acc, u) => ({
+      users: acc.users + 1,
+      wines: acc.wines + Number(u.wines),
+      bottles: acc.bottles + Number(u.bottles),
+      cellar_value: acc.cellar_value + Number(u.cellar_value),
+      priced_bottles: acc.priced_bottles + Number(u.priced_bottles),
+    }),
+    { users: 0, wines: 0, bottles: 0, cellar_value: 0, priced_bottles: 0 }
   )
+
+  const avgPrice = totals.priced_bottles > 0 ? totals.cellar_value / totals.priced_bottles : null
 
   return (
     <div className="space-y-8 max-w-4xl">
@@ -47,15 +57,18 @@ export default async function AdminPage() {
       </div>
 
       {/* Totals */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {[
-          { label: 'Accounts', value: totals.users },
-          { label: 'Total Wines', value: totals.wines },
-          { label: 'Total Bottles', value: totals.bottles },
-        ].map(({ label, value }) => (
+          { label: 'Accounts', value: String(totals.users) },
+          { label: 'Total Wines', value: String(totals.wines) },
+          { label: 'Total Bottles', value: String(totals.bottles) },
+          { label: 'Cellar Value', value: `$${totals.cellar_value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` },
+          { label: 'Avg $ / Bottle', value: avgPrice != null ? `$${avgPrice.toFixed(2)}` : '—', sub: totals.priced_bottles > 0 ? `${totals.priced_bottles} priced` : 'no prices set' },
+        ].map(({ label, value, sub }) => (
           <div key={label} className="rounded-lg border border-border p-4 text-center">
             <div className="text-3xl font-bold">{value}</div>
             <div className="text-sm text-muted-foreground mt-1">{label}</div>
+            {sub && <div className="text-xs text-muted-foreground/60 mt-0.5">{sub}</div>}
           </div>
         ))}
       </div>
@@ -72,6 +85,8 @@ export default async function AdminPage() {
                 <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Last seen</th>
                 <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">Wines</th>
                 <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">Bottles</th>
+                <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">Value</th>
+                <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">Avg $/btl</th>
               </tr>
             </thead>
             <tbody>
@@ -87,6 +102,12 @@ export default async function AdminPage() {
                   <td className="px-4 py-3 text-muted-foreground">{timeAgo(u.last_seen)}</td>
                   <td className="px-4 py-3 text-right">{u.wines}</td>
                   <td className="px-4 py-3 text-right">{u.bottles}</td>
+                  <td className="px-4 py-3 text-right text-muted-foreground">
+                    {Number(u.cellar_value) > 0 ? `$${Number(u.cellar_value).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : '—'}
+                  </td>
+                  <td className="px-4 py-3 text-right text-muted-foreground">
+                    {Number(u.priced_bottles) > 0 ? `$${(Number(u.cellar_value) / Number(u.priced_bottles)).toFixed(2)}` : '—'}
+                  </td>
                 </tr>
               ))}
             </tbody>

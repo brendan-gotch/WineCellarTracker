@@ -88,6 +88,8 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [drankWine, setDrankWine] = useState<Wine | null>(null)
   const [detailWine, setDetailWine] = useState<Wine | null>(null)
+  const [pageSize, setPageSize] = useState<number | 'all'>(50)
+  const [page, setPage] = useState(0)
 
   const countries = useMemo(() => Array.from(new Set(wines.map((w) => w.country).filter(Boolean))).sort() as string[], [wines])
   const sections = useMemo(() => Array.from(new Set(wines.map((w) => w.cellar_section).filter(Boolean))).sort() as string[], [wines])
@@ -143,7 +145,11 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
     else { setSortKey(key); setSortDir('asc') }
+    setPage(0)
   }
+
+  const paged = pageSize === 'all' ? filtered : filtered.slice(page * pageSize, (page + 1) * pageSize)
+  const totalPages = pageSize === 'all' ? 1 : Math.ceil(filtered.length / pageSize)
 
   const alertCount = wines.filter((w) => {
     const s = computeDrinkingStatus(w.drinking_window_start, w.drinking_window_end)
@@ -184,11 +190,11 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
             className="pl-9"
             placeholder="Search wines..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(0) }}
           />
         </div>
 
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
+        <Select value={filterStatus} onValueChange={(v) => { setFilterStatus(v); setPage(0) }}>
           <SelectTrigger className="w-[150px]"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
@@ -201,7 +207,7 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
         </Select>
 
         {countries.length > 0 && (
-          <Select value={filterCountry} onValueChange={setFilterCountry}>
+          <Select value={filterCountry} onValueChange={(v) => { setFilterCountry(v); setPage(0) }}>
             <SelectTrigger className="w-[140px]"><SelectValue placeholder="Country" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Countries</SelectItem>
@@ -211,7 +217,7 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
         )}
 
         {sections.length > 0 && (
-          <Select value={filterSection} onValueChange={setFilterSection}>
+          <Select value={filterSection} onValueChange={(v) => { setFilterSection(v); setPage(0) }}>
             <SelectTrigger className="w-[160px]"><SelectValue placeholder="Section" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Sections</SelectItem>
@@ -224,7 +230,7 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
           </Select>
         )}
 
-        <Select value={filterSticker} onValueChange={setFilterSticker}>
+        <Select value={filterSticker} onValueChange={(v) => { setFilterSticker(v); setPage(0) }}>
           <SelectTrigger className="w-[150px]">
             {filterSticker === 'all'
               ? <span className="text-muted-foreground">Sticker</span>
@@ -248,9 +254,25 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
         </Select>
       </div>
 
-      {/* Summary */}
-      <div className="text-sm text-muted-foreground">
-        {filtered.length} {filtered.length === 1 ? 'wine' : 'wines'} · {filtered.reduce((s, w) => s + w.quantity_remaining, 0)} bottles
+      {/* Summary + page size */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="text-sm text-muted-foreground">
+          {filtered.length} {filtered.length === 1 ? 'wine' : 'wines'} · {filtered.reduce((s, w) => s + w.quantity_remaining, 0)} bottles
+        </div>
+        <Select
+          value={String(pageSize)}
+          onValueChange={(v) => { setPageSize(v === 'all' ? 'all' : Number(v)); setPage(0) }}
+        >
+          <SelectTrigger className="w-[110px] h-8 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {[50, 100, 200, 500].map(n => (
+              <SelectItem key={n} value={String(n)}>{n} per page</SelectItem>
+            ))}
+            <SelectItem value="all">Show all</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Table */}
@@ -280,7 +302,7 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
                   </td>
                 </tr>
               )}
-              {filtered.map((wine) => {
+              {paged.map((wine) => {
                 const status = computeDrinkingStatus(wine.drinking_window_start, wine.drinking_window_end)
                 const sticker = computeStickerColor(wine.drinking_window_start, wine.drinking_window_end)
                 return (
@@ -363,6 +385,25 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
           </table>
         </div>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 text-sm">
+          <button
+            disabled={page === 0}
+            onClick={() => setPage(p => p - 1)}
+            className="px-3 py-1 rounded border border-border disabled:opacity-40 hover:bg-accent transition-colors"
+          >← Prev</button>
+          <span className="text-muted-foreground">
+            Page {page + 1} of {totalPages}
+          </span>
+          <button
+            disabled={page >= totalPages - 1}
+            onClick={() => setPage(p => p + 1)}
+            className="px-3 py-1 rounded border border-border disabled:opacity-40 hover:bg-accent transition-colors"
+          >Next →</button>
+        </div>
+      )}
 
       {drankWine && (
         <DrankItDialog key={drankWine.id} wine={drankWine} open={true} onClose={() => setDrankWine(null)} />
