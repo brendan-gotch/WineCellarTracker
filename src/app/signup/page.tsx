@@ -16,9 +16,6 @@ export default function SignupPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  // Show invite code field only if NEXT_PUBLIC_INVITE_REQUIRED is set
-  const needsInvite = process.env.NEXT_PUBLIC_INVITE_REQUIRED === 'true'
-
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (password !== confirm) { setError('Passwords do not match'); return }
@@ -71,14 +68,11 @@ export default function SignupPage() {
             autoComplete="new-password"
             required
           />
-          {needsInvite && (
-            <Input
-              placeholder="Invite code"
-              value={inviteCode}
-              onChange={e => setInviteCode(e.target.value)}
-              required
-            />
-          )}
+          <Input
+            placeholder="Invite code"
+            value={inviteCode}
+            onChange={e => setInviteCode(e.target.value)}
+          />
           {error && <p className="text-sm text-destructive">{error}</p>}
           <Button type="submit" className="w-full" disabled={loading}>
             {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
