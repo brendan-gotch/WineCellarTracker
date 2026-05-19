@@ -37,7 +37,7 @@ export function WineDetailSheet({ wine, open, onClose, onDrank }: Props) {
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between pr-6">
-            <span>{wine.vintage && `${wine.vintage} `}{wine.winery}</span>
+            <span>{wine.non_vintage ? 'NV ' : wine.vintage ? `${wine.vintage} ` : ''}{wine.winery}</span>
             <div className="flex items-center gap-2">
               {(() => {
                 const sticker = computeStickerColor(wine.drinking_window_start, wine.drinking_window_end)

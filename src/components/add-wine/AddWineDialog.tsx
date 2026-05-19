@@ -8,7 +8,7 @@ import { WineForm } from './WineForm'
 import { createWine } from '@/actions/wines'
 import type { Wine } from '@/db/schema'
 import { apiHeaders } from '@/lib/api-auth'
-import { Camera, PenLine, MessageSquare, Loader2, AlertCircle, ChevronDown, ChevronUp, Check } from 'lucide-react'
+import { Camera, PenLine, MessageSquare, Loader2, AlertCircle, ChevronDown, ChevronUp, Check, X } from 'lucide-react'
 
 type Mode = 'choose' | 'manual' | 'scan' | 'natural'
 
@@ -499,7 +499,19 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
                       )}
                     </div>
                   </div>
-                  {wine.expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
+                  <div className="flex items-center gap-1 shrink-0">
+                    {!wine.saved && (
+                      <button
+                        type="button"
+                        className="p-1 text-muted-foreground hover:text-destructive transition-colors"
+                        title="Remove from this batch"
+                        onClick={(e) => { e.stopPropagation(); setWines(prev => prev.filter(w => w.id !== wine.id)) }}
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                    {wine.expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                  </div>
                 </button>
 
                 {wine.expanded && !wine.enriching && (

@@ -23,7 +23,8 @@ ${sectionCounts ? `Current bottle counts per section: ${JSON.stringify(sectionCo
 
 TASKS:
 
-1. FILL IN MISSING FIELDS: vintage, winery, wine_name, varietal_blend, country, region, cellar_section (1–10)
+1. FILL IN MISSING FIELDS: vintage, non_vintage, winery, wine_name, varietal_blend, country, region, cellar_section (1–10)
+   non_vintage: set to true for wines that are intentionally non-vintage (NV Champagne, NV Cava, etc.). Set vintage to null for NV wines.
 
 2. DRINKING WINDOW — this is critical; use a rigorous multi-step research protocol:
 
@@ -71,6 +72,7 @@ Use web search before filling in any field you're not certain about.
 RESPOND WITH VALID JSON ONLY, no markdown, no explanation:
 {
   "vintage": number | null,
+  "non_vintage": boolean,
   "winery": string | null,
   "wine_name": string | null,
   "varietal_blend": string | null,
@@ -123,6 +125,7 @@ RESPOND WITH VALID JSON ONLY, no markdown, no explanation:
   "wines": [
     {
       "vintage": number | null,
+      "non_vintage": boolean,
       "winery": string | null,
       "wine_name": string | null,
       "varietal_blend": string | null,

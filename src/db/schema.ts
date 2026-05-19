@@ -21,6 +21,7 @@ export const wines = sqliteTable('wines', {
   id:                    text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   user_id:               text('user_id').references(() => users.id),
   vintage:               integer('vintage'),
+  non_vintage:           integer('non_vintage', { mode: 'boolean' }).notNull().default(false),
   winery:                text('winery').notNull(),
   wine_name:             text('wine_name').notNull(),
   varietal_blend:        text('varietal_blend'),

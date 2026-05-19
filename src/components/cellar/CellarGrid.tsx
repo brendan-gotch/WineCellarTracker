@@ -300,7 +300,10 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
                       )}
                     </td>
                     <td className="px-3 py-3 font-mono text-muted-foreground" onClick={e => e.stopPropagation()}>
-                      <InlineEdit value={wine.vintage} type="number" onSave={save(wine.id, 'vintage')} />
+                      {wine.non_vintage
+                        ? <span className="text-xs font-semibold">NV</span>
+                        : <InlineEdit value={wine.vintage} type="number" onSave={save(wine.id, 'vintage')} />
+                      }
                     </td>
                     <td className="px-3 py-3 max-w-0 w-[32%]" onClick={e => e.stopPropagation()}>
                       <div className="font-medium truncate">

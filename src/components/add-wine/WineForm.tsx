@@ -111,7 +111,17 @@ export function WineForm({ initial = {}, aiConfidence, enrichSupplement, section
             Vintage
             <ConfidenceHint field="vintage" confidence={aiConfidence} />
           </Label>
-          <Input type="number" min={1900} max={2099} value={form.vintage ?? ''} onChange={(e) => set('vintage', e.target.value ? parseInt(e.target.value) : undefined)} placeholder="2021" />
+          {form.non_vintage ? (
+            <div className="flex items-center gap-2 h-10">
+              <span className="font-mono text-sm font-medium">NV</span>
+              <button type="button" className="text-xs text-muted-foreground underline" onClick={() => { set('non_vintage', false) }}>clear</button>
+            </div>
+          ) : (
+            <div className="flex gap-1">
+              <Input type="number" min={1900} max={2099} value={form.vintage ?? ''} onChange={(e) => set('vintage', e.target.value ? parseInt(e.target.value) : undefined)} placeholder="2021" />
+              <button type="button" className="px-2 text-xs border border-input rounded-md hover:bg-accent whitespace-nowrap" onClick={() => { set('non_vintage', true); set('vintage', undefined) }}>NV</button>
+            </div>
+          )}
         </div>
         <div className="space-y-1">
           <Label>Format</Label>
