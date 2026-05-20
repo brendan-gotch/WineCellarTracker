@@ -30,9 +30,22 @@ export async function POST(req: NextRequest) {
     if (!textBlock || textBlock.type !== 'text') return NextResponse.json({})
 
     const raw = textBlock.text
-    const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/)
-    const jsonStr = jsonMatch ? jsonMatch[1] : raw
-    return NextResponse.json(JSON.parse(jsonStr.trim()))
+
+    // Try markdown block first, then fall back to finding outermost { ... }
+    const blockMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/)
+    let jsonStr = blockMatch ? blockMatch[1].trim() : raw.trim()
+    if (!blockMatch) {
+      const start = raw.indexOf('{')
+      const end = raw.lastIndexOf('}')
+      if (start !== -1 && end > start) jsonStr = raw.slice(start, end + 1)
+    }
+
+    try {
+      return NextResponse.json(JSON.parse(jsonStr))
+    } catch {
+      console.error('[enrich-wine] JSON parse failed. Raw response:', raw.slice(0, 500))
+      return NextResponse.json({})
+    }
   } catch (err: any) {
     const isAuthError = err?.status === 401 || err?.status === 403
     const isBillingError = err?.status === 402 || err?.message?.toLowerCase().includes('credit') || err?.message?.toLowerCase().includes('billing')
