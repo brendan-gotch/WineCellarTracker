@@ -10,8 +10,8 @@ export const BASE_SECTION_LABELS: Record<number, string> = {
   5: '5 — Rosé',
   6: '6 — Reds (Pinot Noir, Gamay, Grenache)',
   7: '7 — Reds (Sangiovese, Barbera, Nebbiolo)',
-  8: '8 — Reds (Syrah, Zinfandel, Mourvèdre)',
-  9: '9 — Reds (Cabernet Sauvignon, Merlot, Cabernet Franc)',
+  8: '8 — Reds (Syrah, Zinfandel, Cabernet Franc)',
+  9: '9 — Reds (Cabernet Sauvignon, Merlot, Petit Verdot)',
   10: '10 — Reds (Tempranillo, Malbec, Tannat)',
 }
 
@@ -67,6 +67,11 @@ const VARIETAL_SECTION_MAP: [string, number][] = [
   ['verdicchio', 2], ['assyrtiko', 2], ['falanghina', 2],
   ['fiano', 2], ['torrontés', 2], ['torrontes', 2],
   ['trebbiano', 2], ['ugni blanc', 2],
+  ['picpoul', 2], ['piquepoul', 2],
+  ['viura', 2], ['macabeo', 2],                         // Spanish whites
+  ['godello', 2], ['loureiro', 2], ['arinto', 2],       // Portuguese whites
+  ['müller-thurgau', 2], ['muller-thurgau', 2],         // German whites
+  ['silvaner', 2], ['sylvaner', 2],
 
   // Section 3 — Whites (full/rich)
   ['chardonnay', 3], ['viognier', 3], ['roussanne', 3], ['marsanne', 3],
@@ -76,8 +81,11 @@ const VARIETAL_SECTION_MAP: [string, number][] = [
   ['riesling', 4], ['gewürztraminer', 4], ['gewurztraminer', 4],
   ['chenin blanc', 4], ['pinot gris', 4],
   ['pinot blanc', 4], ['pinot bianco', 4],
+  ['grauburgunder', 4],                                 // German Pinot Gris
+  ['weißburgunder', 4], ['weissburgunder', 4],          // German Pinot Blanc
   ['muscat', 4], ['moscato', 4], ['furmint', 4],
   ['welschriesling', 4], ['aligoté', 4], ['aligote', 4],
+  ['scheurebe', 4], ['malvasia', 4],
 
   // Section 5 — Rosé (specific color names)
   ['grenache blanc', 2], ['grenache gris', 5], // edge cases before generic 'grenache'
@@ -85,30 +93,33 @@ const VARIETAL_SECTION_MAP: [string, number][] = [
 
   // Section 6 — Reds (lightest)
   ['pinot noir', 6], ['pinot meunier', 6],
+  ['spätburgunder', 6], ['spatburgunder', 6], ['blauburgunder', 6], // German/Austrian Pinot Noir
   ['gamay', 6],
-  ['grenache', 6], ['garnacha', 6],
+  ['grenache', 6], ['garnacha', 6], ['garnatxa', 6],
   ['cinsault', 6], ['cinsaut', 6],
-  ['schiava', 6], ['vernatsch', 6],
+  ['schiava', 6], ['vernatsch', 6], ['trollinger', 6],
   ['zweigelt', 6], ['st. laurent', 6],
   ['frappato', 6], ['nerello', 6],
 
   // Section 7 — Reds (light-medium, high acid)
-  ['sangiovese', 7], ['barbera', 7], ['nebbiolo', 7], ['dolcetto', 7],
+  ['sangiovese', 7], ['brunello', 7], ['morellino', 7], ['prugnolo', 7], // Sangiovese clones
+  ['barbera', 7], ['nebbiolo', 7], ['dolcetto', 7],
   ['montepulciano', 7], ['corvina', 7], ['rondinella', 7],
   ["nero d'avola", 7], ['gaglioppo', 7],
   ['lagrein', 7], ['teroldego', 7], ['refosco', 7],
+  ['ciliegiolo', 7],
 
   // Section 8 — Reds (medium, structured)
   ['syrah', 8], ['shiraz', 8],
   ['zinfandel', 8], ['primitivo', 8],
+  ['cabernet franc', 8], ['cab franc', 8],  // lighter than Cab Sauv
   ['mourvèdre', 8], ['mourvedre', 8], ['monastrell', 8],
   ['carignan', 8], ['cariñena', 8], ['carinena', 8],
   ['petite sirah', 8], ['durif', 8],
-  ['blaufränkisch', 8], ['blaufrankisch', 8], ['lemberger', 8],
+  ['blaufränkisch', 8], ['blaufrankisch', 8], ['lemberger', 8], ['kékfrankos', 8], ['kekfrankos', 8],
 
   // Section 9 — Reds (full, Bordeaux)
   ['cabernet sauvignon', 9], ['cab sauvignon', 9],
-  ['cabernet franc', 9], ['cab franc', 9],
   ['merlot', 9], ['petit verdot', 9],
   ['carménère', 9], ['carmenere', 9],
 
@@ -171,7 +182,7 @@ export function computeSectionLabels(wines: Wine[]): Record<number, string> {
       const num = parseInt(w.cellar_section ?? '')
       if (num >= 1 && num <= 10 && w.varietal_blend) {
         if (!bySection[num]) bySection[num] = []
-        const primary = w.varietal_blend.split(/[,/&]/)[0].trim()
+        const primary = w.varietal_blend.split(/[,/&]/)[0].trim().replace(/^\d+%?\s*/, '')
         if (primary) bySection[num].push(primary)
       }
     })
