@@ -48,10 +48,10 @@ export const DRINKING_STATUS_COLORS: Record<DrinkingStatus, string> = {
 }
 
 export const DRINKING_STATUS_BADGE_STYLES: Record<DrinkingStatus, { background: string; color: string }> = {
-  not_ready: { background: '#1A1C2E', color: '#7A8EC8' },
-  ready:     { background: '#182820', color: '#48B888' },
-  peak:      { background: '#152A1A', color: '#4DC878' },
-  past_peak: { background: '#2C2208', color: '#D09038' },
-  overdue:   { background: '#2A1818', color: '#C86868' },
-  unknown:   { background: '#1E1E26', color: '#7A7589' },
+  not_ready: { background: 'var(--badge-not-ready-bg)',   color: 'var(--badge-not-ready-text)' },
+  ready:     { background: 'var(--badge-early-peak-bg)',  color: 'var(--badge-early-peak-text)' },
+  peak:      { background: 'var(--badge-peak-bg)',        color: 'var(--badge-peak-text)' },
+  past_peak: { background: 'var(--badge-past-peak-bg)',   color: 'var(--badge-past-peak-text)' },
+  overdue:   { background: 'var(--badge-declining-bg)',   color: 'var(--badge-declining-text)' },
+  unknown:   { background: 'var(--badge-unknown-bg)',     color: 'var(--badge-unknown-text)' },
 }

@@ -61,6 +61,26 @@
   --nav-hover:       #2E2B39;
 }
 
+/* Status badge colors — light mode */
+:root {
+  --badge-not-ready-bg:    #E8EAFA; --badge-not-ready-text:    #3A52A0;
+  --badge-early-peak-bg:   #E2F5EC; --badge-early-peak-text:   #1A7A48;
+  --badge-peak-bg:         #DDF5E0; --badge-peak-text:         #1A6B30;
+  --badge-past-peak-bg:    #FDF3DC; --badge-past-peak-text:    #8A5A00;
+  --badge-declining-bg:    #FAEAEA; --badge-declining-text:    #B03030;
+  --badge-unknown-bg:      #F0EFF8; --badge-unknown-text:      #6B6680;
+}
+
+/* Status badge colors — dark mode */
+.dark {
+  --badge-not-ready-bg:    #1A1C2E; --badge-not-ready-text:    #7A8EC8;
+  --badge-early-peak-bg:   #182820; --badge-early-peak-text:   #48B888;
+  --badge-peak-bg:         #152A1A; --badge-peak-text:         #4DC878;
+  --badge-past-peak-bg:    #2C2208; --badge-past-peak-text:    #D09038;
+  --badge-declining-bg:    #2A1818; --badge-declining-text:    #C86868;
+  --badge-unknown-bg:      #1E1E26; --badge-unknown-text:      #7A7589;
+}
+
 @layer base {
   * { @apply border-border; }
   body { @apply bg-background text-foreground font-sans antialiased; }
