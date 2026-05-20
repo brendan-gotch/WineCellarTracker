@@ -286,6 +286,7 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
                 <SortHeader label="Wine" sortKey="winery" current={sortKey} dir={sortDir} onClick={toggleSort} className="w-[32%]" />
                 <SortHeader label="Country" sortKey="country" current={sortKey} dir={sortDir} onClick={toggleSort} />
                 <SortHeader label="Region" sortKey="region" current={sortKey} dir={sortDir} onClick={toggleSort} />
+                <th className="px-3 py-2.5 text-left font-medium text-muted-foreground">Section</th>
                 <SortHeader label="Size" sortKey="format" current={sortKey} dir={sortDir} onClick={toggleSort} />
                 <SortHeader label="Status" sortKey="status" current={sortKey} dir={sortDir} onClick={toggleSort} />
                 <SortHeader label="Price" sortKey="price" current={sortKey} dir={sortDir} onClick={toggleSort} />
@@ -296,7 +297,7 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
             <tbody>
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="text-center py-12 text-muted-foreground">
+                  <td colSpan={11} className="text-center py-12 text-muted-foreground">
                     <WineIcon className="h-8 w-8 mx-auto mb-2 opacity-30" />
                     {isFiltered ? 'No wines match your filters' : 'Your cellar is empty — add some wines!'}
                   </td>
@@ -345,6 +346,11 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
                     </td>
                     <td className="px-3 py-3 text-muted-foreground">
                       <InlineEdit value={wine.region} onSave={save(wine.id, 'region')} />
+                    </td>
+                    <td className="px-3 py-3 text-muted-foreground text-xs">
+                      {wine.cellar_section
+                        ? (sectionLabels?.[parseInt(wine.cellar_section)] ?? wine.cellar_section)
+                        : <span className="opacity-30">—</span>}
                     </td>
                     <td className="px-3 py-3 text-muted-foreground whitespace-nowrap">
                       <InlineEdit value={wine.format ?? '750ml'} onSave={save(wine.id, 'format')} />

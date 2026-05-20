@@ -327,7 +327,7 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
             const entryId = entries[i + j].id
             const qty = w.quantity ?? 1
             try {
-              const body = JSON.stringify({ ...w, quantity_added: qty, quantity_remaining: qty, _originalText: naturalText })
+              const body = JSON.stringify({ ...w, quantity_added: qty, quantity_remaining: qty })
               const fetchEnrich = () => fetch('/api/enrich-wine', { method: 'POST', headers: apiHeaders(), body })
 
               let res = await fetchEnrich()

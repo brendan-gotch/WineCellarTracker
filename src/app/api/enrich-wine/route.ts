@@ -7,6 +7,24 @@ import { logSystemAlert } from '@/lib/alerts'
 
 export const maxDuration = 120
 
+function extractJson(text: string): string | null {
+  const blockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (blockMatch) return blockMatch[1].trim()
+  const start = text.indexOf('{')
+  if (start === -1) return null
+  let depth = 0, inString = false, escape = false
+  for (let i = start; i < text.length; i++) {
+    const c = text[i]
+    if (escape) { escape = false; continue }
+    if (c === '\\' && inString) { escape = true; continue }
+    if (c === '"') { inString = !inString; continue }
+    if (inString) continue
+    if (c === '{') depth++
+    if (c === '}' && --depth === 0) return text.slice(start, i + 1)
+  }
+  return null
+}
+
 export async function POST(req: NextRequest) {
   const authError = checkApiAuth(req)
   if (authError) return authError
@@ -30,14 +48,11 @@ export async function POST(req: NextRequest) {
     if (!textBlock || textBlock.type !== 'text') return NextResponse.json({})
 
     const raw = textBlock.text
+    const jsonStr = extractJson(raw)
 
-    // Try markdown block first, then fall back to finding outermost { ... }
-    const blockMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/)
-    let jsonStr = blockMatch ? blockMatch[1].trim() : raw.trim()
-    if (!blockMatch) {
-      const start = raw.indexOf('{')
-      const end = raw.lastIndexOf('}')
-      if (start !== -1 && end > start) jsonStr = raw.slice(start, end + 1)
+    if (!jsonStr) {
+      console.error('[enrich-wine] No JSON found. Raw response:', raw.slice(0, 500))
+      return NextResponse.json({})
     }
 
     try {

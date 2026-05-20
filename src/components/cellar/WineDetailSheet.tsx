@@ -87,7 +87,7 @@ export function WineDetailSheet({ wine, open, onClose, onDrank, sectionLabels }:
               <Detail label="Region" value={wine.region} />
               <Detail label="Format" value={wine.format ?? '750ml'} />
               <Detail label="Bottles Remaining" value={`${wine.quantity_remaining} of ${wine.quantity_added}`} />
-              <Detail label="Cellar Section" value={wine.cellar_section} />
+              <Detail label="Cellar Section" value={wine.cellar_section ? (sectionLabels?.[parseInt(wine.cellar_section)] ?? wine.cellar_section) : null} />
               <Detail label="Drinking Window" value={wine.drinking_window_start ? `${wine.drinking_window_start}–${wine.drinking_window_end ?? '?'}` : null} />
               <Detail label="Price" value={wine.price != null ? `$${wine.price % 1 === 0 ? wine.price : wine.price.toFixed(2)}` : null} />
             </div>
