@@ -21,19 +21,30 @@ TASKS:
 
 2. DRINKING WINDOW — this is critical:
 
-   For well-documented producers (established Burgundy domaines, Napa estates, major Champagne houses, prominent Barolo/Brunello producers, well-known California cult wines, established Old World appellations): trust your training data directly — apply STEP 4 style adjustments from memory, skip web search unless you're genuinely uncertain about a specific vintage.
+   STEP 1 — DIRECT LOOKUP: Search "[producer] [wine name] [vintage] drinking window" and "[producer] [wine name] [vintage] when to drink". Look for:
+     - Critic tasting notes with explicit drinking windows (Wine Spectator, Vinous, Wine Advocate, Jancis Robinson, CellarTracker)
+     - Winery's own recommendations on their website
+     - Sommelier forums (WSET, GuildSomm) and collector communities (Wine Berserkers, CellarTracker reviews)
 
-   For small/obscure producers, unusual regions, or wines where you're uncertain: use the full protocol:
-   STEP 1 — Search "[producer] [wine name] [vintage] drinking window" — look for critic windows (Wine Spectator, Vinous, Wine Advocate, Jancis Robinson, CellarTracker)
-   STEP 2 — PROXY if sparse: same producer adjacent vintage, or same appellation+varietal+vintage baseline
-   STEP 3 — Search "[region] [vintage] vintage quality" — hot years drink earlier, cool structured years age longer
-   STEP 4 — STYLE ADJUSTMENT (always apply): extracted/high-octane = shorter; elegant/restrained = longer; natural/minimal-intervention = shorter; large format = +30–40% window length
+   STEP 2 — PROXY (if exact wine+vintage has sparse data): Search in this priority order:
+     a) Same producer, adjacent vintage (±1–2 years): adjust based on vintage quality difference
+     b) Same appellation + varietal + vintage: search "[region] [varietal] [vintage] drinking window"
+     c) Regional/varietal baseline: e.g. "Willamette Valley Pinot Noir drinking window" or "Barolo typical aging"
+     Always note which proxy you used by setting confidence to 0.7–0.8
+
+   STEP 3 — VINTAGE QUALITY ADJUSTMENT: Search "[region] [vintage] vintage quality" or "[vintage] vintage report [region]". Hot years = earlier drinking; cool structured years = longer aging.
+
+   STEP 4 — STYLE ADJUSTMENT: Consider the winery's documented style:
+     - Extracted/high-octane: typically shorter windows than critics suggest
+     - Elegant/restrained: often ages longer than expected
+     - Natural/minimal-intervention: often shorter shelf life
+     - Magnums/large format: add 30–40% to the window length
 
    drinking_window_start: year pleasurable for most drinkers (can be a past year)
    drinking_window_end: honest last date before meaningful decline
    ALWAYS return a window — a calibrated estimate beats null every time
 
-3. PRICE — always search for current retail/market price in USD if not provided:
+3. PRICE — estimate current retail/market price in USD if not provided:
    - Search for current retail prices, auction results, or winery direct prices
    - Return as a number (e.g. 45 for $45), rounded to nearest dollar
    - If the user already provided a price, return it unchanged
@@ -43,11 +54,11 @@ TASKS:
    - Answer: why would someone care about THIS wine over any other bottle?
    - The test: would this make someone lean in at a dinner table? If not, return null
    - Good examples: "Doug Nalle helped define Dry Creek Zinfandel's restrained style; tiny production, rarely seen outside the mailing list." / "Bedrock's site dates to 1888 — one of California's oldest continuously farmed vineyards, surviving Prohibition as a raisin operation."
-   - Search only if you're not confident in a specific compelling fact — return null rather than something generic
+   - If you can't find a genuinely compelling specific fact, return null
 
 5. CONFIDENCE SCORES 0.0–1.0 for every field. Use 0.7–0.8 for proxy-based estimates, 0.9+ for verified facts.
 
-WEB SEARCH SUMMARY: Skip search for basic metadata (varietal, country, region, appellation) on recognizable wines — use training knowledge. Skip drinking window search for well-known producers — use training knowledge + style adjustment. Always search for price. Search for "why interesting" only when you need a specific verifiable fact.
+Use web search for drinking windows, price, and any field you're not certain about.
 
 RESPOND WITH VALID JSON ONLY, no markdown, no explanation:
 {
