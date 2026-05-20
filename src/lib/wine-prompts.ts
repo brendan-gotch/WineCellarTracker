@@ -16,39 +16,34 @@ ${sectionCounts ? `Current bottle counts per section: ${JSON.stringify(sectionCo
 
 TASKS:
 
+IMPORTANT: For every field NOT supplied in the known information, you MUST return a non-null value. Use web search and your training knowledge. Do not leave country, region, varietal_blend, cellar_section, drinking_window_start, or drinking_window_end as null — a calibrated estimate is always better than null. Only return null for winery/wine_name if you genuinely cannot determine them.
+
 1. FILL IN MISSING FIELDS: vintage, non_vintage, winery, wine_name, varietal_blend, country, region, cellar_section (1–10)
    non_vintage: set to true for wines that are intentionally non-vintage (NV Champagne, NV Cava, etc.). Set vintage to null for NV wines.
 
-2. DRINKING WINDOW — this is critical:
+2. DRINKING WINDOW — work through these fallback levels in order, stopping as soon as you have enough data:
 
-   STEP 1 — DIRECT LOOKUP: Search "[producer] [wine name] [vintage] drinking window" and "[producer] [wine name] [vintage] when to drink". Look for:
-     - Critic tasting notes with explicit drinking windows (Wine Spectator, Vinous, Wine Advocate, Jancis Robinson, CellarTracker)
-     - Winery's own recommendations on their website
-     - Sommelier forums (WSET, GuildSomm) and collector communities (Wine Berserkers, CellarTracker reviews)
+   LEVEL 1 — EXACT WINE: Search "[producer] [wine name] [vintage] drinking window site:cellartracker.com OR site:vinous.com OR site:wineadvocate.com OR site:winespectator.com". Also try "[producer] [wine name] [vintage] when to drink".
 
-   STEP 2 — PROXY (if exact wine+vintage has sparse data): Search in this priority order:
-     a) Same producer, adjacent vintage (±1–2 years): adjust based on vintage quality difference
-     b) Same appellation + varietal + vintage: search "[region] [varietal] [vintage] drinking window"
-     c) Regional/varietal baseline: e.g. "Willamette Valley Pinot Noir drinking window" or "Barolo typical aging"
-     Always note which proxy you used by setting confidence to 0.7–0.8
+   LEVEL 2 — SAME PRODUCER, ADJACENT VINTAGE: If Level 1 returns sparse data, search "[producer] [wine name] [vintage±1] drinking window" and adjust for vintage quality difference. Set confidence 0.80.
 
-   STEP 3 — VINTAGE QUALITY ADJUSTMENT: Search "[region] [vintage] vintage quality" or "[vintage] vintage report [region]". Hot years = earlier drinking; cool structured years = longer aging.
+   LEVEL 3 — SAME PRODUCER, SAME VARIETAL: If Level 2 also sparse, search "[producer] [varietal] drinking window" to establish the producer's general style and aging range for this grape. Set confidence 0.75.
 
-   STEP 4 — STYLE ADJUSTMENT: Consider the winery's documented style:
-     - Extracted/high-octane: typically shorter windows than critics suggest
-     - Elegant/restrained: often ages longer than expected
-     - Natural/minimal-intervention: often shorter shelf life
-     - Magnums/large format: add 30–40% to the window length
+   LEVEL 4 — PEER PRODUCERS, SAME REGION/AVA + VARIETAL + VINTAGE: Search "[region/AVA] [varietal] [vintage] drinking window" or identify 2–3 comparable producers in the same appellation making the same varietal at a similar price point, and use their windows as a baseline. Set confidence 0.70.
 
-   drinking_window_start: year pleasurable for most drinkers (can be a past year)
+   VINTAGE QUALITY ADJUSTMENT (apply at any level): Search "[region] [vintage] vintage report" — hot years drink earlier, cool structured years age longer. Always factor this in.
+
+   STYLE ADJUSTMENT (apply at any level): extracted/high-octane = shorter window; elegant/restrained = longer; natural/minimal-intervention = shorter shelf life; large format = +30–40%.
+
+   drinking_window_start: year pleasurable for most drinkers
    drinking_window_end: honest last date before meaningful decline
-   ALWAYS return a window — a calibrated estimate beats null every time
+   ALWAYS return a window — even a Level 4 proxy estimate beats null.
 
 3. PRICE — estimate current retail/market price in USD if not provided:
    - Search for current retail prices, auction results, or winery direct prices
+   - If the exact wine is hard to find, use same producer other bottlings as a baseline and adjust for tier
    - Return as a number (e.g. 45 for $45), rounded to nearest dollar
    - If the user already provided a price, return it unchanged
-   - If you genuinely cannot find any pricing signal, return null
 
 4. WHY INTERESTING — one sentence, under 30 words, verified facts only:
    - Answer: why would someone care about THIS wine over any other bottle?
@@ -56,7 +51,7 @@ TASKS:
    - Good examples: "Doug Nalle helped define Dry Creek Zinfandel's restrained style; tiny production, rarely seen outside the mailing list." / "Bedrock's site dates to 1888 — one of California's oldest continuously farmed vineyards, surviving Prohibition as a raisin operation."
    - If you can't find a genuinely compelling specific fact, return null
 
-5. CONFIDENCE SCORES 0.0–1.0 for every field. Use 0.7–0.8 for proxy-based estimates, 0.9+ for verified facts.
+5. CONFIDENCE SCORES 0.0–1.0 for every field. Use the level number above to guide confidence (Level 1 = 0.85–0.95, Level 2 = 0.80, Level 3 = 0.75, Level 4 = 0.70). 0.9+ for directly verified facts.
 
 Use web search for drinking windows, price, and any field you're not certain about.
 

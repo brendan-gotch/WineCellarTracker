@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   try {
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 2048,
+      max_tokens: 4096,
       tools: [{ type: 'web_search_20250305' as any, name: 'web_search' }],
       system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }] as any,
       messages: [{ role: 'user', content: userMessage }],
