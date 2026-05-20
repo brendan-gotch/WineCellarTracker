@@ -125,10 +125,20 @@ const VARIETAL_SECTION_MAP: [string, number][] = [
   ['bonarda', 10],
 ]
 
+const SPARKLING_REGIONS = [
+  'champagne', 'prosecco', 'cava', 'franciacorta', 'crémant', 'cremant',
+  'sekt', 'mousseux', 'espumante', 'espumoso', 'cap classique',
+]
+
 export function assignSection(
   varietal: string | null | undefined,
   sectionLabels: Record<number, string>,
+  hints?: { region?: string | null },
 ): string | null {
+  // Region beats varietal — a Champagne-region Chardonnay is still sparkling
+  const regionLower = (hints?.region ?? '').toLowerCase()
+  if (regionLower && SPARKLING_REGIONS.some(r => regionLower.includes(r))) return '1'
+
   if (!varietal) return null
   const v = varietal.toLowerCase()
 

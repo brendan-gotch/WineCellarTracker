@@ -232,7 +232,8 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
         if (!enriched.cellar_section) {
           enriched.cellar_section = assignSection(
             enriched.varietal_blend ?? scanned.varietal_blend,
-            sectionLabels ?? {}
+            sectionLabels ?? {},
+            { region: enriched.region ?? scanned.region }
           )
         }
         setScanEnrichRaw(enriched)
@@ -353,7 +354,7 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
                 merged.winery = canonicalizeWinery(merged.winery, existingWines.map(e => e.winery))
               }
               if (!merged.cellar_section) {
-                merged.cellar_section = assignSection(merged.varietal_blend as string, sectionLabels ?? {})
+                merged.cellar_section = assignSection(merged.varietal_blend as string, sectionLabels ?? {}, { region: merged.region as string })
               }
               setWines(prev => prev.map(e => e.id === entryId
                 ? { ...e, enriched: merged, formData: e.userEdited ? e.formData : merged, enriching: false }
@@ -421,7 +422,7 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
     // User values always win: spread enriched first, then override with formData
     const finalData = { ...enriched, ...formData, ai_confidence: enriched?.ai_confidence ?? null }
     if (!finalData.cellar_section) {
-      finalData.cellar_section = assignSection(finalData.varietal_blend, sectionLabels ?? {})
+      finalData.cellar_section = assignSection(finalData.varietal_blend, sectionLabels ?? {}, { region: finalData.region })
     }
     await createWine(finalData as any)
     handleClose()
