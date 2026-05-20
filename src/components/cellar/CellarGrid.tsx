@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef } from 'react'
 import { Wine } from '@/db/schema'
-import { computeDrinkingStatus, DRINKING_STATUS_LABELS, DRINKING_STATUS_COLORS } from '@/lib/drinking-status'
+import { computeDrinkingStatus, DRINKING_STATUS_LABELS, DRINKING_STATUS_BADGE_STYLES } from '@/lib/drinking-status'
 import { DrankItDialog } from '@/components/drank/DrankItDialog'
 import { WineDetailSheet } from './WineDetailSheet'
 import { Input } from '@/components/ui/input'
@@ -158,7 +158,16 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
 
   const save = (id: string, field: string) => async (val: string) => {
     const parsed: any = {}
-    if (field === 'vintage' || field === 'quantity_remaining' || field === 'quantity_added') {
+    if (field === 'vintage') {
+      if (val.toUpperCase() === 'NV') {
+        parsed.non_vintage = true
+        parsed.vintage = null
+      } else {
+        parsed.non_vintage = false
+        const n = parseInt(val)
+        parsed.vintage = isNaN(n) ? null : n
+      }
+    } else if (field === 'quantity_remaining' || field === 'quantity_added') {
       const n = parseInt(val)
       parsed[field] = isNaN(n) ? null : n
     } else if (field === 'price') {
@@ -254,25 +263,20 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
         </Select>
       </div>
 
-      {/* Summary + page size */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="text-sm text-muted-foreground">
-          {filtered.length} {filtered.length === 1 ? 'wine' : 'wines'} · {filtered.reduce((s, w) => s + w.quantity_remaining, 0)} bottles
-        </div>
-        <Select
-          value={String(pageSize)}
-          onValueChange={(v) => { setPageSize(v === 'all' ? 'all' : Number(v)); setPage(0) }}
-        >
-          <SelectTrigger className="w-[110px] h-8 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {[50, 100, 200, 500].map(n => (
-              <SelectItem key={n} value={String(n)}>{n} per page</SelectItem>
-            ))}
-            <SelectItem value="all">Show all</SelectItem>
-          </SelectContent>
-        </Select>
+      {/* Sticker legend */}
+      <div className="flex items-center gap-x-4 gap-y-1 flex-wrap text-muted-foreground" style={{ fontSize: '11px' }}>
+        <span className="font-medium">Sticker:</span>
+        {STICKER_ORDER.map(color => (
+          <span key={color} className="flex items-center gap-1">
+            <span className={cn('inline-block h-2 w-2 rounded-full shrink-0', STICKER_COLORS[color])} />
+            <span>{STICKER_YEAR_RANGES[color]}</span>
+          </span>
+        ))}
+      </div>
+
+      {/* Summary */}
+      <div className="text-sm text-muted-foreground">
+        {filtered.length} {filtered.length === 1 ? 'wine' : 'wines'} · {filtered.reduce((s, w) => s + w.quantity_remaining, 0)} bottles
       </div>
 
       {/* Table */}
@@ -322,10 +326,11 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
                       )}
                     </td>
                     <td className="px-3 py-3 font-mono text-muted-foreground">
-                      {wine.non_vintage ?? false
-                        ? <span className="text-xs font-semibold">NV</span>
-                        : <InlineEdit value={wine.vintage} type="number" onSave={save(wine.id, 'vintage')} />
-                      }
+                      <InlineEdit
+                        value={wine.non_vintage ? 'NV' : (wine.vintage?.toString() ?? '')}
+                        type="text"
+                        onSave={save(wine.id, 'vintage')}
+                      />
                     </td>
                     <td className="px-3 py-3 max-w-0 w-[32%]">
                       <div className="font-medium truncate">
@@ -349,9 +354,19 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
                       <InlineEdit value={wine.format ?? '750ml'} onSave={save(wine.id, 'format')} />
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap">
-                      <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium', DRINKING_STATUS_COLORS[status])}>
-                        {DRINKING_STATUS_LABELS[status]}
-                      </span>
+                      {(() => {
+                        const s = DRINKING_STATUS_BADGE_STYLES[status]
+                        return (
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center',
+                            background: s.background, color: s.color,
+                            borderRadius: '20px', fontSize: '11px', fontWeight: 500,
+                            padding: '3px 9px', whiteSpace: 'nowrap',
+                          }}>
+                            {DRINKING_STATUS_LABELS[status]}
+                          </span>
+                        )
+                      })()}
                     </td>
                     <td className="px-3 py-3 text-muted-foreground">
                       <InlineEdit
@@ -384,26 +399,51 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
             </tbody>
           </table>
         </div>
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 text-sm">
-          <button
-            disabled={page === 0}
-            onClick={() => setPage(p => p - 1)}
-            className="px-3 py-1 rounded border border-border disabled:opacity-40 hover:bg-accent transition-colors"
-          >← Prev</button>
-          <span className="text-muted-foreground">
-            Page {page + 1} of {totalPages}
-          </span>
-          <button
-            disabled={page >= totalPages - 1}
-            onClick={() => setPage(p => p + 1)}
-            className="px-3 py-1 rounded border border-border disabled:opacity-40 hover:bg-accent transition-colors"
-          >Next →</button>
+        {/* Table footer: pagination */}
+        <div className="flex items-center justify-between px-4 py-3 border-t border-border text-sm text-muted-foreground bg-muted/30">
+          <div className="flex items-center gap-3">
+            {totalPages > 1 && (
+              <>
+                <button
+                  disabled={page === 0}
+                  onClick={() => setPage(p => p - 1)}
+                  className="disabled:opacity-40 hover:text-foreground transition-colors"
+                >← Prev</button>
+              </>
+            )}
+            <span>
+              {pageSize === 'all'
+                ? `Showing all ${filtered.length} wines.`
+                : `Showing ${filtered.length === 0 ? 0 : page * (pageSize as number) + 1}–${Math.min((page + 1) * (pageSize as number), filtered.length)} of ${filtered.length} wines.`
+              }
+            </span>
+            {totalPages > 1 && (
+              <button
+                disabled={page >= totalPages - 1}
+                onClick={() => setPage(p => p + 1)}
+                className="disabled:opacity-40 hover:text-foreground transition-colors"
+              >Next →</button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <span>Rows per page:</span>
+            <Select
+              value={String(pageSize)}
+              onValueChange={(v) => { setPageSize(v === 'all' ? 'all' : Number(v)); setPage(0) }}
+            >
+              <SelectTrigger className="w-[80px] h-7 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[50, 100, 200, 500].map(n => (
+                  <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                ))}
+                <SelectItem value="all">All</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-      )}
+      </div>
 
       {drankWine && (
         <DrankItDialog key={drankWine.id} wine={drankWine} open={true} onClose={() => setDrankWine(null)} />

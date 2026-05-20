@@ -31,7 +31,7 @@ export function computeDrinkingStatus(
 
 export const DRINKING_STATUS_LABELS: Record<DrinkingStatus, string> = {
   not_ready: 'Not Ready',
-  ready: 'Ready',
+  ready: 'Early Peak',
   peak: 'Peak',
   past_peak: 'Past Peak',
   overdue: 'Declining',
@@ -39,10 +39,19 @@ export const DRINKING_STATUS_LABELS: Record<DrinkingStatus, string> = {
 }
 
 export const DRINKING_STATUS_COLORS: Record<DrinkingStatus, string> = {
-  not_ready: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-  ready: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-  peak: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
-  past_peak: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-  overdue: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-  unknown: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+  not_ready: '',
+  ready: '',
+  peak: '',
+  past_peak: '',
+  overdue: '',
+  unknown: '',
+}
+
+export const DRINKING_STATUS_BADGE_STYLES: Record<DrinkingStatus, { background: string; color: string }> = {
+  not_ready: { background: '#1A1C2E', color: '#7A8EC8' },
+  ready:     { background: '#182820', color: '#48B888' },
+  peak:      { background: '#152A1A', color: '#4DC878' },
+  past_peak: { background: '#2C2208', color: '#D09038' },
+  overdue:   { background: '#2A1818', color: '#C86868' },
+  unknown:   { background: '#1E1E26', color: '#7A7589' },
 }

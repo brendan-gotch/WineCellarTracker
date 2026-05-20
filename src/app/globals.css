@@ -4,50 +4,61 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --primary: 346 77% 49%;
-    --primary-foreground: 355 100% 97%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --ring: 346 77% 49%;
-    --radius: 0.5rem;
+    /* Light mode surfaces */
+    --background:        252 18% 96%;   /* #F2F1F7 */
+    --foreground:        250 23% 12%;   /* #1A1826 */
+    --muted:             255 33% 98%;   /* #F8F7FC */
+    --muted-foreground:  256 10% 63%;   /* #9A96AC */
+    --popover:           255 33% 98%;   /* #F8F7FC */
+    --popover-foreground:250 23% 12%;
+    --card:              0 0% 100%;     /* #FFFFFF */
+    --card-foreground:   250 23% 12%;
+    --border:            254 22% 90%;   /* #E2E0EE */
+    --input:             254 22% 90%;
+    --primary:           344 54% 48%;   /* #C0385A */
+    --primary-foreground:0 0% 100%;
+    --secondary:         255 33% 98%;
+    --secondary-foreground:255 12% 39%;  /* #5C5870 */
+    --accent:            252 38% 96%;   /* #F0EFF8 hover */
+    --accent-foreground: 250 23% 12%;
+    --destructive:       0 84% 60%;
+    --destructive-foreground:0 0% 98%;
+    --ring:              344 54% 48%;
+    --radius:            0.5rem;
   }
 
-  /* Squid ink dark mode — dark slate blue, not pitch black */
   .dark {
-    --background: 213 28% 11%;
-    --foreground: 210 20% 92%;
-    --muted: 213 22% 18%;
-    --muted-foreground: 213 15% 55%;
-    --popover: 213 26% 14%;
-    --popover-foreground: 210 20% 92%;
-    --card: 213 24% 14%;
-    --card-foreground: 210 20% 92%;
-    --border: 213 20% 22%;
-    --input: 213 20% 22%;
-    --primary: 346 77% 55%;
-    --primary-foreground: 355 100% 97%;
-    --secondary: 213 20% 20%;
-    --secondary-foreground: 0 0% 98%;
-    --accent: 213 20% 20%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 85.7% 97.3%;
-    --ring: 346 77% 55%;
+    /* Dark mode surfaces */
+    --background:        266 12% 8%;    /* #131217 */
+    --foreground:        252 23% 93%;   /* #EAE8F2 */
+    --muted:             255 14% 16%;   /* #272430 elevated */
+    --muted-foreground:  258 9% 50%;    /* #7A7589 */
+    --popover:           255 14% 16%;   /* #272430 */
+    --popover-foreground:252 23% 93%;
+    --card:              252 14% 14%;   /* #201E28 surface */
+    --card-foreground:   252 23% 93%;
+    --border:            256 11% 22%;   /* #36333F */
+    --input:             256 11% 22%;
+    --primary:           344 54% 48%;   /* #C0385A */
+    --primary-foreground:0 0% 100%;
+    --secondary:         252 14% 14%;
+    --secondary-foreground:258 11% 69%; /* #AAA5BA */
+    --accent:            256 14% 20%;   /* #2E2B39 hover */
+    --accent-foreground: 252 23% 93%;
+    --destructive:       0 63% 31%;
+    --destructive-foreground:0 86% 97%;
+    --ring:              344 54% 48%;
   }
+}
+
+/* Nav stays dark in BOTH light and dark modes */
+:root, .dark {
+  --nav-bg:          #19171F;
+  --nav-border:      #36333F;
+  --nav-text:        #AAA5BA;
+  --nav-text-active: #EAE8F2;
+  --nav-accent:      #C0385A;
+  --nav-hover:       #2E2B39;
 }
 
 @layer base {
@@ -55,7 +66,6 @@
   body { @apply bg-background text-foreground font-sans antialiased; }
 }
 
-/* Softer placeholders — clearly example text, not real data */
 input::placeholder,
 textarea::placeholder {
   opacity: 0.35;

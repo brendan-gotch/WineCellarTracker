@@ -1,5 +1,4 @@
-import { computeDrinkingStatus, DRINKING_STATUS_LABELS, DRINKING_STATUS_COLORS } from '@/lib/drinking-status'
-import { cn } from '@/lib/utils'
+import { computeDrinkingStatus, DRINKING_STATUS_LABELS, DRINKING_STATUS_BADGE_STYLES } from '@/lib/drinking-status'
 
 interface Props {
   windowStart: number | null | undefined
@@ -9,8 +8,22 @@ interface Props {
 
 export function DrinkingStatusBadge({ windowStart, windowEnd, className }: Props) {
   const status = computeDrinkingStatus(windowStart, windowEnd)
+  const s = DRINKING_STATUS_BADGE_STYLES[status]
   return (
-    <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium', DRINKING_STATUS_COLORS[status], className)}>
+    <span
+      className={className}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        background: s.background,
+        color: s.color,
+        borderRadius: '20px',
+        fontSize: '11px',
+        fontWeight: 500,
+        padding: '3px 9px',
+        whiteSpace: 'nowrap',
+      }}
+    >
       {DRINKING_STATUS_LABELS[status]}
     </span>
   )
