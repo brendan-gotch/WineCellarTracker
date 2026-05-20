@@ -64,7 +64,7 @@
 /* Status badge colors — light mode */
 :root {
   --badge-not-ready-bg:    #EAECF8; --badge-not-ready-text:    #445099;
-  --badge-early-peak-bg:   #E0F5EC; --badge-early-peak-text:   #1F7A52;
+  --badge-early-peak-bg:   #D8F0EE; --badge-early-peak-text:   #1A6868;
   --badge-peak-bg:         #DCF3E4; --badge-peak-text:         #1A6E38;
   --badge-past-peak-bg:    #FEF2DC; --badge-past-peak-text:    #8A5A10;
   --badge-declining-bg:    #FAECEC; --badge-declining-text:    #8A3030;
@@ -74,7 +74,7 @@
 /* Status badge colors — dark mode */
 .dark {
   --badge-not-ready-bg:    #1A1C2E; --badge-not-ready-text:    #7A8EC8;
-  --badge-early-peak-bg:   #182820; --badge-early-peak-text:   #48B888;
+  --badge-early-peak-bg:   #0F2826; --badge-early-peak-text:   #45C0B8;
   --badge-peak-bg:         #152A1A; --badge-peak-text:         #4DC878;
   --badge-past-peak-bg:    #2C2208; --badge-past-peak-text:    #D09038;
   --badge-declining-bg:    #2A1818; --badge-declining-text:    #C86868;
