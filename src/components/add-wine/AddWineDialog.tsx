@@ -316,30 +316,33 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
       })
       setWines(entries)
 
-      // Enrich sequentially — parallel calls hit Anthropic rate limits and silently blank out later wines
+      // Enrich in batches of 3 — fully parallel overwhelms Anthropic rate limits,
+      // fully sequential is too slow; 3 concurrent is a good middle ground
+      const ENRICH_CONCURRENCY = 3
       ;(async () => {
-        for (let i = 0; i < allWines.length; i++) {
-          const w = allWines[i]
-          const entryId = entries[i].id
-          const qty = w.quantity ?? 1
-          try {
-            const res = await fetch('/api/enrich-wine', {
-              method: 'POST',
-              headers: apiHeaders(),
-              body: JSON.stringify({ ...w, quantity_added: qty, quantity_remaining: qty, _originalText: naturalText }),
-            })
-            const enriched = await res.json()
-            const merged = mergeData({ ...w, quantity_added: qty, quantity_remaining: qty }, enriched)
-            if (typeof merged.winery === 'string') {
-              merged.winery = canonicalizeWinery(merged.winery, existingWines.map(e => e.winery))
+        for (let i = 0; i < allWines.length; i += ENRICH_CONCURRENCY) {
+          await Promise.all(allWines.slice(i, i + ENRICH_CONCURRENCY).map(async (w: any, j: number) => {
+            const entryId = entries[i + j].id
+            const qty = w.quantity ?? 1
+            try {
+              const res = await fetch('/api/enrich-wine', {
+                method: 'POST',
+                headers: apiHeaders(),
+                body: JSON.stringify({ ...w, quantity_added: qty, quantity_remaining: qty, _originalText: naturalText }),
+              })
+              const enriched = await res.json()
+              const merged = mergeData({ ...w, quantity_added: qty, quantity_remaining: qty }, enriched)
+              if (typeof merged.winery === 'string') {
+                merged.winery = canonicalizeWinery(merged.winery, existingWines.map(e => e.winery))
+              }
+              setWines(prev => prev.map(e => e.id === entryId
+                ? { ...e, enriched: merged, formData: merged, enriching: false }
+                : e
+              ))
+            } catch {
+              setWines(prev => prev.map(e => e.id === entryId ? { ...e, enriching: false } : e))
             }
-            setWines(prev => prev.map(e => e.id === entryId
-              ? { ...e, enriched: merged, formData: merged, enriching: false }
-              : e
-            ))
-          } catch {
-            setWines(prev => prev.map(e => e.id === entryId ? { ...e, enriching: false } : e))
-          }
+          }))
         }
       })()
     } catch {
