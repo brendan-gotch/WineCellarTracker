@@ -98,15 +98,11 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
     let list = wines.filter((w) => w.quantity_remaining > 0)
 
     if (search) {
-      const q = search.toLowerCase()
-      list = list.filter((w) =>
-        w.winery.toLowerCase().includes(q) ||
-        w.wine_name.toLowerCase().includes(q) ||
-        w.varietal_blend?.toLowerCase().includes(q) ||
-        w.region?.toLowerCase().includes(q) ||
-        w.country?.toLowerCase().includes(q) ||
-        String(w.vintage ?? '').includes(q)
-      )
+      const terms = search.toLowerCase().split(/\s+/).filter(Boolean)
+      list = list.filter((w) => {
+        const hay = [w.winery, w.wine_name, w.varietal_blend, w.region, w.country, String(w.vintage ?? '')].join(' ').toLowerCase()
+        return terms.every(t => hay.includes(t))
+      })
     }
 
     if (filterStatus !== 'all') {
@@ -449,7 +445,7 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
         <DrankItDialog key={drankWine.id} wine={drankWine} open={true} onClose={() => setDrankWine(null)} />
       )}
       {detailWine && (
-        <WineDetailSheet key={detailWine.id} wine={detailWine} open={true} onClose={() => setDetailWine(null)} onDrank={() => { setDetailWine(null); setDrankWine(detailWine) }} />
+        <WineDetailSheet key={detailWine.id} wine={detailWine} open={true} sectionLabels={sectionLabels} onClose={() => setDetailWine(null)} onDrank={() => { setDetailWine(null); setDrankWine(detailWine) }} />
       )}
     </div>
   )

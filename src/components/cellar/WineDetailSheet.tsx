@@ -17,9 +17,10 @@ interface Props {
   open: boolean
   onClose: () => void
   onDrank: () => void
+  sectionLabels?: Record<number, string>
 }
 
-export function WineDetailSheet({ wine, open, onClose, onDrank }: Props) {
+export function WineDetailSheet({ wine, open, onClose, onDrank, sectionLabels }: Props) {
   const [editing, setEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [refreshingFact, setRefreshingFact] = useState(false)
@@ -134,6 +135,7 @@ export function WineDetailSheet({ wine, open, onClose, onDrank }: Props) {
               initial={wine as any}
               aiConfidence={wine.ai_confidence ?? undefined}
               isEditMode={true}
+              sectionLabels={sectionLabels}
               onSubmit={handleUpdate}
               submitLabel="Save Changes"
             />

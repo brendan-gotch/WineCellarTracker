@@ -63,11 +63,11 @@
 
 /* Status badge colors — light mode */
 :root {
-  --badge-not-ready-bg:    #E8EAFA; --badge-not-ready-text:    #3A52A0;
-  --badge-early-peak-bg:   #E2F5EC; --badge-early-peak-text:   #1A7A48;
-  --badge-peak-bg:         #DDF5E0; --badge-peak-text:         #1A6B30;
-  --badge-past-peak-bg:    #FDF3DC; --badge-past-peak-text:    #8A5A00;
-  --badge-declining-bg:    #FAEAEA; --badge-declining-text:    #B03030;
+  --badge-not-ready-bg:    #EAECF8; --badge-not-ready-text:    #445099;
+  --badge-early-peak-bg:   #E0F5EC; --badge-early-peak-text:   #1F7A52;
+  --badge-peak-bg:         #DCF3E4; --badge-peak-text:         #1A6E38;
+  --badge-past-peak-bg:    #FEF2DC; --badge-past-peak-text:    #8A5A10;
+  --badge-declining-bg:    #FAECEC; --badge-declining-text:    #8A3030;
   --badge-unknown-bg:      #F0EFF8; --badge-unknown-text:      #6B6680;
 }
 
