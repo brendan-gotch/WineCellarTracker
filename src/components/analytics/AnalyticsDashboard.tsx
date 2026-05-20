@@ -7,6 +7,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
 } from 'recharts'
+import { computeSectionLabels, SECTION_COUNT } from '@/lib/cellar-sections'
 
 const COLORS = ['#be123c', '#e11d48', '#f43f5e', '#fb7185', '#fda4af', '#fecdd3']
 
@@ -88,6 +89,25 @@ export function AnalyticsDashboard({ wines, drankLog }: Props) {
   const pricedBottles = pricedWines.reduce((s, w) => s + w.quantity_remaining, 0)
   const avgPricePerBottle = pricedBottles > 0 ? cellarValue / pricedBottles : null
 
+  const sectionLabels = useMemo(() => computeSectionLabels(activeWines), [activeWines])
+
+  const bySection = useMemo(() => {
+    return Array.from({ length: SECTION_COUNT }, (_, i) => i + 1).map(n => {
+      const sectionWines = activeWines.filter(w => w.cellar_section === String(n))
+      const bottles = sectionWines.reduce((s, w) => s + w.quantity_remaining, 0)
+      const value = sectionWines.filter(w => w.price != null).reduce((s, w) => s + (w.price ?? 0) * w.quantity_remaining, 0)
+      const pricedBtl = sectionWines.filter(w => w.price != null).reduce((s, w) => s + w.quantity_remaining, 0)
+      return {
+        n,
+        label: sectionLabels[n] ?? `${n}`,
+        wines: sectionWines.length,
+        bottles,
+        value,
+        avgPrice: pricedBtl > 0 ? value / pricedBtl : null,
+      }
+    }).filter(s => s.bottles > 0)
+  }, [activeWines, sectionLabels])
+
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-bold">Analytics</h1>
@@ -100,6 +120,41 @@ export function AnalyticsDashboard({ wines, drankLog }: Props) {
         <StatCard label="Cellar value" value={`$${cellarValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`} />
         <StatCard label="Avg $ / bottle" value={avgPricePerBottle != null ? `$${avgPricePerBottle.toFixed(2)}` : '—'} />
       </div>
+
+      {/* By Section */}
+      {bySection.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="font-semibold">By Section</h2>
+          <div className="rounded-lg border border-border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 border-b border-border">
+                <tr>
+                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Section</th>
+                  <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">Wines</th>
+                  <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">Bottles</th>
+                  <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">Value</th>
+                  <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">Avg $/btl</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bySection.map(s => (
+                  <tr key={s.n} className="border-b border-border/50 last:border-0">
+                    <td className="px-4 py-2.5">{s.label}</td>
+                    <td className="px-4 py-2.5 text-right text-muted-foreground">{s.wines}</td>
+                    <td className="px-4 py-2.5 text-right font-medium">{s.bottles}</td>
+                    <td className="px-4 py-2.5 text-right text-muted-foreground">
+                      {s.value > 0 ? `$${s.value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : '—'}
+                    </td>
+                    <td className="px-4 py-2.5 text-right text-muted-foreground">
+                      {s.avgPrice != null ? `$${s.avgPrice.toFixed(0)}` : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-3">
