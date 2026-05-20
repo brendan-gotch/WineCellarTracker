@@ -316,29 +316,32 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
       })
       setWines(entries)
 
-      // Enrich all in parallel
-      allWines.forEach(async (w: any, i: number) => {
-        const entryId = entries[i].id
-        const qty = w.quantity ?? 1
-        try {
-          const res = await fetch('/api/enrich-wine', {
-            method: 'POST',
-            headers: apiHeaders(),
-            body: JSON.stringify({ ...w, quantity_added: qty, quantity_remaining: qty, _originalText: naturalText }),
-          })
-          const enriched = await res.json()
-          const merged = mergeData({ ...w, quantity_added: qty, quantity_remaining: qty }, enriched)
-          if (typeof merged.winery === 'string') {
-            merged.winery = canonicalizeWinery(merged.winery, existingWines.map(e => e.winery))
+      // Enrich sequentially — parallel calls hit Anthropic rate limits and silently blank out later wines
+      ;(async () => {
+        for (let i = 0; i < allWines.length; i++) {
+          const w = allWines[i]
+          const entryId = entries[i].id
+          const qty = w.quantity ?? 1
+          try {
+            const res = await fetch('/api/enrich-wine', {
+              method: 'POST',
+              headers: apiHeaders(),
+              body: JSON.stringify({ ...w, quantity_added: qty, quantity_remaining: qty, _originalText: naturalText }),
+            })
+            const enriched = await res.json()
+            const merged = mergeData({ ...w, quantity_added: qty, quantity_remaining: qty }, enriched)
+            if (typeof merged.winery === 'string') {
+              merged.winery = canonicalizeWinery(merged.winery, existingWines.map(e => e.winery))
+            }
+            setWines(prev => prev.map(e => e.id === entryId
+              ? { ...e, enriched: merged, formData: merged, enriching: false }
+              : e
+            ))
+          } catch {
+            setWines(prev => prev.map(e => e.id === entryId ? { ...e, enriching: false } : e))
           }
-          setWines(prev => prev.map(e => e.id === entryId
-            ? { ...e, enriched: merged, formData: merged, enriching: false }
-            : e
-          ))
-        } catch {
-          setWines(prev => prev.map(e => e.id === entryId ? { ...e, enriching: false } : e))
         }
-      })
+      })()
     } catch {
       setParseError('Something went wrong. Please try again.')
     } finally {
