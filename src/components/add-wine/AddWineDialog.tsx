@@ -327,12 +327,20 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
             const entryId = entries[i + j].id
             const qty = w.quantity ?? 1
             try {
-              const res = await fetch('/api/enrich-wine', {
-                method: 'POST',
-                headers: apiHeaders(),
-                body: JSON.stringify({ ...w, quantity_added: qty, quantity_remaining: qty, _originalText: naturalText }),
-              })
-              const enriched = await res.json()
+              const body = JSON.stringify({ ...w, quantity_added: qty, quantity_remaining: qty, _originalText: naturalText })
+              const fetchEnrich = () => fetch('/api/enrich-wine', { method: 'POST', headers: apiHeaders(), body })
+
+              let res = await fetchEnrich()
+              let enriched = await res.json()
+
+              // Retry once if response is empty or an error — handles transient rate limits / cache-write latency
+              const isEmpty = !enriched.drinking_window_start && !enriched.varietal_blend && !enriched.country && !enriched.price
+              if (!res.ok || enriched.error || isEmpty) {
+                await new Promise(r => setTimeout(r, 3000))
+                res = await fetchEnrich()
+                enriched = await res.json()
+              }
+
               const merged = mergeData({ ...w, quantity_added: qty, quantity_remaining: qty }, enriched)
               if (typeof merged.winery === 'string') {
                 merged.winery = canonicalizeWinery(merged.winery, existingWines.map(e => e.winery))
