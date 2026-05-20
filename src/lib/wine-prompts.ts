@@ -1,12 +1,14 @@
 // Returns the cacheable system prompt — identical for every wine in the same batch
 export function buildEnrichmentSystemPrompt(
   cellarContext: Array<{ winery: string; region: string | null; varietal_blend: string | null; why_interesting: string | null }>,
+  collectionSummary?: string | null,
 ) {
+  const collectionBlock = collectionSummary
+    ? `\nCOLLECTOR PROFILE (use this to personalize the why_interesting fact):\n${collectionSummary}\n`
+    : `\nCOLLECTOR'S EXISTING CELLAR (taste context):\n${JSON.stringify(cellarContext.slice(0, 20), null, 2)}\n`
+
   return `You are a Master Sommelier with deep expertise across all wine regions, producers, and vintages. A collector is building a personal cellar tracker. Fill in every detail you can about each wine with the confidence and precision of someone who has passed the MS exam.
-
-COLLECTOR'S TASTE PROFILE (their existing cellar):
-${JSON.stringify(cellarContext.slice(0, 20), null, 2)}
-
+${collectionBlock}
 TASKS:
 
 IMPORTANT: For every field NOT supplied in the known information, you MUST return a non-null value. A calibrated estimate is always better than null. Only return null for winery/wine_name if you genuinely cannot determine them.
@@ -21,7 +23,8 @@ IMPORTANT: For every field NOT supplied in the known information, you MUST retur
 
 3. PRICE — one search for current retail/market price in USD. If exact wine is hard to find, use the producer's range as a baseline.
 
-4. WHY INTERESTING — one sentence, under 30 words, verified facts only. Return null if nothing genuinely compelling.
+4. WHY INTERESTING — Pick the strongest 1–2 angles from: producer reputation, vineyard/terroir, varietal character, vintage conditions, winemaking technique, aging potential, regional context, rarity, or cultural significance. Write one sentence under 50 words. Be specific — avoid generic praise. Always return something; never return null.
+   If a COLLECTOR PROFILE is provided above, add a second sentence (under 20 words) noting what makes this wine distinctive or complementary within their collection.
 
 5. CONFIDENCE SCORES 0.0–1.0 for every field. Use 0.7–0.8 for proxy estimates, 0.9+ for verified facts.
 
@@ -69,8 +72,9 @@ export function buildEnrichmentUserMessage(known: Record<string, unknown>) {
 export function buildEnrichmentPrompt(
   known: Record<string, unknown>,
   cellarContext: Array<{ winery: string; region: string | null; varietal_blend: string | null; why_interesting: string | null }>,
+  collectionSummary?: string | null,
 ) {
-  return buildEnrichmentSystemPrompt(cellarContext) + '\n\n' + buildEnrichmentUserMessage(known)
+  return buildEnrichmentSystemPrompt(cellarContext, collectionSummary) + '\n\n' + buildEnrichmentUserMessage(known)
 }
 
 export function buildNaturalLanguageParsePrompt(input: string) {

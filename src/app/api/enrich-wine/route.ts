@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { anthropic } from '@/lib/anthropic'
 import { buildEnrichmentSystemPrompt, buildEnrichmentUserMessage } from '@/lib/wine-prompts'
-import { getCellarContext } from '@/actions/wines'
+import { getCellarContext, getWines } from '@/actions/wines'
 import { checkApiAuth } from '@/lib/api-auth'
 import { logSystemAlert } from '@/lib/alerts'
+import { getCollectionSummary } from '@/lib/collection-summary'
+import { getSession } from '@/lib/session'
 
 export const maxDuration = 120
 
@@ -30,9 +32,11 @@ export async function POST(req: NextRequest) {
   if (authError) return authError
 
   const known = await req.json()
-  const cellarContext = await getCellarContext()
+  const session = await getSession()
+  const [cellarContext, allWines] = await Promise.all([getCellarContext(), getWines()])
+  const collectionSummary = session ? await getCollectionSummary(session.userId, allWines) : null
 
-  const systemPrompt = buildEnrichmentSystemPrompt(cellarContext)
+  const systemPrompt = buildEnrichmentSystemPrompt(cellarContext, collectionSummary)
   const userMessage = buildEnrichmentUserMessage(known)
 
   try {

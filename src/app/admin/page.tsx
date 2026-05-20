@@ -3,7 +3,6 @@ import { getSession } from '@/lib/session'
 import { db } from '@/db'
 import { users, wines } from '@/db/schema'
 import { eq, sql, desc } from 'drizzle-orm'
-import { ReassignSectionsButton } from './ReassignSectionsButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -113,18 +112,6 @@ export default async function AdminPage() {
               ))}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      {/* Cellar Tools */}
-      <div>
-        <h2 className="text-base font-semibold mb-3">Cellar Tools</h2>
-        <div className="p-4 rounded-lg border border-border space-y-3">
-          <div>
-            <div className="font-medium text-sm">Re-assign Sections</div>
-            <div className="text-xs text-muted-foreground mb-3">Run the new body-weight section rules against your entire cellar and preview what would move.</div>
-            <ReassignSectionsButton />
-          </div>
         </div>
       </div>
 

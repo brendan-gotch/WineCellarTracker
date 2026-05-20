@@ -68,9 +68,17 @@ export const system_alerts = sqliteTable('system_alerts', {
   dismissed:  integer('dismissed', { mode: 'boolean' }).notNull().default(false),
 })
 
+export const collectionSummaries = sqliteTable('collection_summaries', {
+  user_id:    text('user_id').primaryKey().references(() => users.id),
+  summary:    text('summary').notNull(),
+  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  wine_count: integer('wine_count').notNull(),
+})
+
 export type Wine = typeof wines.$inferSelect
 export type NewWine = typeof wines.$inferInsert
 export type DrankLog = typeof drank_log.$inferSelect
 export type NewDrankLog = typeof drank_log.$inferInsert
 export type User = typeof users.$inferSelect
 export type SystemAlert = typeof system_alerts.$inferSelect
+export type CollectionSummary = typeof collectionSummaries.$inferSelect
