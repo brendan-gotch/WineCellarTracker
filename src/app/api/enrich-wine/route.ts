@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { anthropic } from '@/lib/anthropic'
-import { buildEnrichmentPrompt } from '@/lib/wine-prompts'
+import { buildEnrichmentSystemPrompt, buildEnrichmentUserMessage } from '@/lib/wine-prompts'
 import { getCellarContext, getSectionCounts } from '@/actions/wines'
 import { checkApiAuth } from '@/lib/api-auth'
 import { logSystemAlert } from '@/lib/alerts'
@@ -14,14 +14,16 @@ export async function POST(req: NextRequest) {
   const known = await req.json()
   const [cellarContext, sectionCounts] = await Promise.all([getCellarContext(), getSectionCounts()])
 
-  const prompt = buildEnrichmentPrompt(known, cellarContext, sectionCounts)
+  const systemPrompt = buildEnrichmentSystemPrompt(cellarContext, sectionCounts)
+  const userMessage = buildEnrichmentUserMessage(known)
 
   try {
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 2048,
       tools: [{ type: 'web_search_20250305' as any, name: 'web_search' }],
-      messages: [{ role: 'user', content: prompt }],
+      system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }] as any,
+      messages: [{ role: 'user', content: userMessage }],
     })
 
     const textBlock = message.content.filter((b) => b.type === 'text').pop()

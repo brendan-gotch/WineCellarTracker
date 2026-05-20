@@ -1,18 +1,11 @@
 import { SECTION_STYLE_GUIDE } from './cellar-sections'
 
-export function buildEnrichmentPrompt(
-  known: Record<string, unknown>,
+// Returns the cacheable system prompt — identical for every wine in the same batch
+export function buildEnrichmentSystemPrompt(
   cellarContext: Array<{ winery: string; region: string | null; varietal_blend: string | null; why_interesting: string | null }>,
   sectionCounts?: Record<number, number>
 ) {
-  const originalText = known._originalText ? `\nORIGINAL USER INPUT: "${known._originalText}"\nThe winery, wine name, and vintage in the original input are ground truth — do not change them.\n` : ''
-  const cleanKnown = { ...known }
-  delete cleanKnown._originalText
-
-  return `You are a Master Sommelier with deep expertise across all wine regions, producers, and vintages. A collector is building a personal cellar tracker. Fill in every detail you can about this wine with the confidence and precision of someone who has passed the MS exam.
-${originalText}
-KNOWN INFORMATION (parsed from user input — treat non-null values as facts):
-${JSON.stringify(cleanKnown, null, 2)}
+  return `You are a Master Sommelier with deep expertise across all wine regions, producers, and vintages. A collector is building a personal cellar tracker. Fill in every detail you can about each wine with the confidence and precision of someone who has passed the MS exam.
 
 COLLECTOR'S TASTE PROFILE (their existing cellar):
 ${JSON.stringify(cellarContext.slice(0, 20), null, 2)}
@@ -26,48 +19,35 @@ TASKS:
 1. FILL IN MISSING FIELDS: vintage, non_vintage, winery, wine_name, varietal_blend, country, region, cellar_section (1–10)
    non_vintage: set to true for wines that are intentionally non-vintage (NV Champagne, NV Cava, etc.). Set vintage to null for NV wines.
 
-2. DRINKING WINDOW — this is critical; use a rigorous multi-step research protocol:
+2. DRINKING WINDOW — this is critical:
 
-   STEP 1 — DIRECT LOOKUP: Search "[producer] [wine name] [vintage] drinking window" and "[producer] [wine name] [vintage] when to drink". Look for:
-     - Critic tasting notes with explicit drinking windows (Wine Spectator, Vinous, Wine Advocate, Jancis Robinson, CellarTracker)
-     - Winery's own recommendations on their website
-     - Sommelier forums (WSET, GuildSomm) and collector communities (Wine Berserkers, CellarTracker reviews)
+   For well-documented producers (established Burgundy domaines, Napa estates, major Champagne houses, prominent Barolo/Brunello producers, well-known California cult wines, established Old World appellations): trust your training data directly — apply STEP 4 style adjustments from memory, skip web search unless you're genuinely uncertain about a specific vintage.
 
-   STEP 2 — PROXY (if exact wine+vintage has sparse data): Search in this priority order:
-     a) Same producer, adjacent vintage (±1–2 years): adjust based on vintage quality difference
-     b) Same appellation + varietal + vintage: search "[region] [varietal] [vintage] drinking window"
-     c) Regional/varietal baseline: e.g. "Dry Creek Zinfandel drinking window" or "Barolo typical aging"
-     Always note which proxy you used by setting confidence to 0.7–0.8
+   For small/obscure producers, unusual regions, or wines where you're uncertain: use the full protocol:
+   STEP 1 — Search "[producer] [wine name] [vintage] drinking window" — look for critic windows (Wine Spectator, Vinous, Wine Advocate, Jancis Robinson, CellarTracker)
+   STEP 2 — PROXY if sparse: same producer adjacent vintage, or same appellation+varietal+vintage baseline
+   STEP 3 — Search "[region] [vintage] vintage quality" — hot years drink earlier, cool structured years age longer
+   STEP 4 — STYLE ADJUSTMENT (always apply): extracted/high-octane = shorter; elegant/restrained = longer; natural/minimal-intervention = shorter; large format = +30–40% window length
 
-   STEP 3 — VINTAGE QUALITY ADJUSTMENT: Search "[region] [vintage] vintage quality" or "[vintage] vintage report [region]". Hot years = earlier drinking; cool structured years = longer aging.
+   drinking_window_start: year pleasurable for most drinkers (can be a past year)
+   drinking_window_end: honest last date before meaningful decline
+   ALWAYS return a window — a calibrated estimate beats null every time
 
-   STEP 4 — STYLE ADJUSTMENT: Consider the winery's documented style:
-     - Extracted/high-octane: typically shorter windows than critics suggest
-     - Elegant/restrained: often ages longer than expected
-     - Natural/minimal-intervention: often shorter shelf life
-     - Magnums/large format: add 30–40% to the window length
-
-   drinking_window_start: year the wine is pleasurable for most drinkers (can be a past year for already-open bottles)
-   drinking_window_end: honest last date before meaningful decline — not generous, not alarmist
-   For wines clearly past their prime: set drinking_window_end to a past year so the system flags them
-   ALWAYS return a window — a calibrated proxy beats null every time
-
-3. PRICE — estimate current retail/market price in USD if not provided:
-   - Search for current retail prices, auction results, or winery direct prices.
-   - Return the price as a number (e.g. 45 for $45). Round to nearest dollar.
-   - If the user already provided a price, return it unchanged.
-   - If you genuinely cannot find any pricing signal, return null.
+3. PRICE — always search for current retail/market price in USD if not provided:
+   - Search for current retail prices, auction results, or winery direct prices
+   - Return as a number (e.g. 45 for $45), rounded to nearest dollar
+   - If the user already provided a price, return it unchanged
+   - If you genuinely cannot find any pricing signal, return null
 
 4. WHY INTERESTING — one sentence, under 30 words, verified facts only:
-   - Answer: why would someone care about THIS wine over any other bottle? What makes it legendary, rare, or genuinely different?
-   - Think: producer's story, region's claim to fame, vintage significance, or what makes this wine impossible to replicate.
-   - The test: would this make someone lean in at a dinner table? If not, it's too generic — return null instead.
-   - Good examples: "Doug Nalle helped define Dry Creek Zinfandel's restrained style; tiny production, rarely seen outside the mailing list." / "Tony Coturri has farmed Sonoma biodynamically since the 1970s — nearly impossible to find outside the mailing list." / "2000 was a perfect Sauternes vintage; Château d'Yquem made one of the most concentrated wines of the century." / "Bedrock's site dates to 1888 — one of California's oldest continuously farmed vineyards, surviving Prohibition as a raisin operation."
-   - If you can't find a genuinely compelling specific fact, return null.
+   - Answer: why would someone care about THIS wine over any other bottle?
+   - The test: would this make someone lean in at a dinner table? If not, return null
+   - Good examples: "Doug Nalle helped define Dry Creek Zinfandel's restrained style; tiny production, rarely seen outside the mailing list." / "Bedrock's site dates to 1888 — one of California's oldest continuously farmed vineyards, surviving Prohibition as a raisin operation."
+   - Search only if you're not confident in a specific compelling fact — return null rather than something generic
 
-5. CONFIDENCE SCORES 0.0–1.0 for every field. Use 0.7–0.8 for proxy-based estimates, 0.9+ for verified facts. Return null rather than low-confidence guesses for winery/wine_name.
+5. CONFIDENCE SCORES 0.0–1.0 for every field. Use 0.7–0.8 for proxy-based estimates, 0.9+ for verified facts.
 
-Use web search before filling in any field you're not certain about.
+WEB SEARCH SUMMARY: Skip search for basic metadata (varietal, country, region, appellation) on recognizable wines — use training knowledge. Skip drinking window search for well-known producers — use training knowledge + style adjustment. Always search for price. Search for "why interesting" only when you need a specific verifiable fact.
 
 RESPOND WITH VALID JSON ONLY, no markdown, no explanation:
 {
@@ -97,6 +77,25 @@ RESPOND WITH VALID JSON ONLY, no markdown, no explanation:
     "why_interesting": number
   }
 }`
+}
+
+// Returns the per-wine user message
+export function buildEnrichmentUserMessage(known: Record<string, unknown>) {
+  const originalText = known._originalText
+    ? `ORIGINAL USER INPUT: "${known._originalText}"\nThe winery, wine name, and vintage in the original input are ground truth — do not change them.\n\n`
+    : ''
+  const cleanKnown = { ...known }
+  delete cleanKnown._originalText
+  return `${originalText}KNOWN INFORMATION (treat non-null values as facts):\n${JSON.stringify(cleanKnown, null, 2)}`
+}
+
+// Legacy single-string form — kept for any callers that haven't switched yet
+export function buildEnrichmentPrompt(
+  known: Record<string, unknown>,
+  cellarContext: Array<{ winery: string; region: string | null; varietal_blend: string | null; why_interesting: string | null }>,
+  sectionCounts?: Record<number, number>
+) {
+  return buildEnrichmentSystemPrompt(cellarContext, sectionCounts) + '\n\n' + buildEnrichmentUserMessage(known)
 }
 
 export function buildNaturalLanguageParsePrompt(input: string) {
