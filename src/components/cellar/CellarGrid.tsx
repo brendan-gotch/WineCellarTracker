@@ -16,7 +16,7 @@ import {
   STICKER_ORDER, type StickerColor,
 } from '@/lib/cellar-stickers'
 
-type SortKey = 'vintage' | 'winery' | 'country' | 'region' | 'drinking_window_start' | 'quantity_remaining' | 'format' | 'status' | 'sticker' | 'price'
+type SortKey = 'vintage' | 'winery' | 'country' | 'region' | 'cellar_section' | 'drinking_window_start' | 'quantity_remaining' | 'format' | 'status' | 'sticker' | 'price'
 type SortDir = 'asc' | 'desc'
 
 const STATUS_ORDER: Record<string, number> = { not_ready: 0, ready: 1, peak: 2, past_peak: 3, overdue: 4 }
@@ -124,6 +124,9 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
         const sb = computeStickerColor(b.drinking_window_start, b.drinking_window_end)
         av = sa != null ? STICKER_ORDER.indexOf(sa) : 999
         bv = sb != null ? STICKER_ORDER.indexOf(sb) : 999
+      } else if (sortKey === 'cellar_section') {
+        av = parseInt(a.cellar_section ?? '999')
+        bv = parseInt(b.cellar_section ?? '999')
       } else {
         av = a[sortKey as keyof Wine]
         bv = b[sortKey as keyof Wine]
@@ -286,7 +289,7 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
                 <SortHeader label="Wine" sortKey="winery" current={sortKey} dir={sortDir} onClick={toggleSort} className="w-[32%]" />
                 <SortHeader label="Country" sortKey="country" current={sortKey} dir={sortDir} onClick={toggleSort} />
                 <SortHeader label="Region" sortKey="region" current={sortKey} dir={sortDir} onClick={toggleSort} />
-                <th className="px-3 py-2.5 text-left font-medium text-muted-foreground">Section</th>
+                <SortHeader label="Section" sortKey="cellar_section" current={sortKey} dir={sortDir} onClick={toggleSort} />
                 <SortHeader label="Size" sortKey="format" current={sortKey} dir={sortDir} onClick={toggleSort} />
                 <SortHeader label="Status" sortKey="status" current={sortKey} dir={sortDir} onClick={toggleSort} />
                 <SortHeader label="Price" sortKey="price" current={sortKey} dir={sortDir} onClick={toggleSort} />
