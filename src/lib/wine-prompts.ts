@@ -1,24 +1,17 @@
-import { SECTION_STYLE_GUIDE } from './cellar-sections'
-
 // Returns the cacheable system prompt — identical for every wine in the same batch
 export function buildEnrichmentSystemPrompt(
   cellarContext: Array<{ winery: string; region: string | null; varietal_blend: string | null; why_interesting: string | null }>,
-  sectionCounts?: Record<number, number>
 ) {
   return `You are a Master Sommelier with deep expertise across all wine regions, producers, and vintages. A collector is building a personal cellar tracker. Fill in every detail you can about each wine with the confidence and precision of someone who has passed the MS exam.
 
 COLLECTOR'S TASTE PROFILE (their existing cellar):
 ${JSON.stringify(cellarContext.slice(0, 20), null, 2)}
 
-CELLAR SECTION SYSTEM:
-${SECTION_STYLE_GUIDE}
-${sectionCounts ? `Current bottle counts per section: ${JSON.stringify(sectionCounts)}. Try to distribute evenly — avoid suggesting a section that already has significantly more bottles than others.` : ''}
-
 TASKS:
 
 IMPORTANT: For every field NOT supplied in the known information, you MUST return a non-null value. A calibrated estimate is always better than null. Only return null for winery/wine_name if you genuinely cannot determine them.
 
-1. FILL IN MISSING FIELDS: vintage, non_vintage, winery, wine_name, varietal_blend, country, region, cellar_section (1–10)
+1. FILL IN MISSING FIELDS: vintage, non_vintage, winery, wine_name, varietal_blend, country, region
    non_vintage: set to true for intentionally non-vintage wines (NV Champagne, NV Cava, etc.).
 
 2. DRINKING WINDOW — do at most 2 web searches total, in this priority order:
@@ -45,7 +38,6 @@ RESPOND WITH VALID JSON ONLY, no markdown, no explanation:
   "region": string | null,
   "drinking_window_start": number | null,
   "drinking_window_end": number | null,
-  "cellar_section": string | null,
   "price": number | null,
   "why_interesting": string | null,
   "ai_confidence": {
@@ -57,7 +49,6 @@ RESPOND WITH VALID JSON ONLY, no markdown, no explanation:
     "region": number,
     "drinking_window_start": number,
     "drinking_window_end": number,
-    "cellar_section": number,
     "price": number,
     "why_interesting": number
   }
@@ -78,9 +69,8 @@ export function buildEnrichmentUserMessage(known: Record<string, unknown>) {
 export function buildEnrichmentPrompt(
   known: Record<string, unknown>,
   cellarContext: Array<{ winery: string; region: string | null; varietal_blend: string | null; why_interesting: string | null }>,
-  sectionCounts?: Record<number, number>
 ) {
-  return buildEnrichmentSystemPrompt(cellarContext, sectionCounts) + '\n\n' + buildEnrichmentUserMessage(known)
+  return buildEnrichmentSystemPrompt(cellarContext) + '\n\n' + buildEnrichmentUserMessage(known)
 }
 
 export function buildNaturalLanguageParsePrompt(input: string) {

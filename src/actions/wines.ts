@@ -5,6 +5,7 @@ import { wines, type NewWine } from '@/db/schema'
 import { eq, desc, sql, and } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { getSession } from '@/lib/session'
+import { computeSectionLabels, assignSection } from '@/lib/cellar-sections'
 
 async function requireUserId(): Promise<string> {
   const session = await getSession()
@@ -80,4 +81,39 @@ export async function getSectionCounts(): Promise<Record<number, number>> {
     if (n >= 1 && n <= 10) counts[n] = Number(row.bottles)
   }
   return counts
+}
+
+export async function previewSectionReassignment(): Promise<Array<{
+  id: string
+  winery: string
+  wine_name: string
+  varietal_blend: string | null
+  currentSection: string | null
+  proposedSection: string | null
+}>> {
+  const userId = await requireUserId()
+  const allWines = await db.select().from(wines).where(eq(wines.user_id, userId))
+  const sectionLabels = computeSectionLabels(allWines)
+
+  return allWines
+    .filter(w => w.quantity_remaining > 0)
+    .map(w => ({
+      id: w.id,
+      winery: w.winery,
+      wine_name: w.wine_name,
+      varietal_blend: w.varietal_blend,
+      currentSection: w.cellar_section,
+      proposedSection: assignSection(w.varietal_blend, sectionLabels),
+    }))
+    .filter(w => w.proposedSection !== null && w.proposedSection !== w.currentSection)
+}
+
+export async function applySectionReassignment(changes: Array<{ id: string; cellar_section: string }>) {
+  const userId = await requireUserId()
+  for (const { id, cellar_section } of changes) {
+    await db.update(wines)
+      .set({ cellar_section, updated_at: new Date() })
+      .where(and(eq(wines.id, id), eq(wines.user_id, userId)))
+  }
+  revalidatePath('/')
 }

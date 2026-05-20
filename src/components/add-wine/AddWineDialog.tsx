@@ -9,6 +9,7 @@ import { createWine } from '@/actions/wines'
 import type { Wine } from '@/db/schema'
 import { apiHeaders } from '@/lib/api-auth'
 import { Camera, PenLine, MessageSquare, Loader2, AlertCircle, ChevronDown, ChevronUp, Check, X } from 'lucide-react'
+import { assignSection } from '@/lib/cellar-sections'
 
 type Mode = 'choose' | 'manual' | 'scan' | 'natural'
 
@@ -228,6 +229,12 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
           body: JSON.stringify({ ...scanned }),
         })
         const enriched = await enrichRes.json()
+        if (!enriched.cellar_section) {
+          enriched.cellar_section = assignSection(
+            enriched.varietal_blend ?? scanned.varietal_blend,
+            sectionLabels ?? {}
+          )
+        }
         setScanEnrichRaw(enriched)
       } catch {
         // Enrichment failed silently — form still works with scan data
@@ -345,6 +352,9 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
               if (typeof merged.winery === 'string') {
                 merged.winery = canonicalizeWinery(merged.winery, existingWines.map(e => e.winery))
               }
+              if (!merged.cellar_section) {
+                merged.cellar_section = assignSection(merged.varietal_blend as string, sectionLabels ?? {})
+              }
               setWines(prev => prev.map(e => e.id === entryId
                 ? { ...e, enriched: merged, formData: e.userEdited ? e.formData : merged, enriching: false }
                 : e
@@ -409,11 +419,11 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
     })
     const enriched = await enrichRes.json()
     // User values always win: spread enriched first, then override with formData
-    await createWine({
-      ...enriched,
-      ...formData,
-      ai_confidence: enriched?.ai_confidence ?? null,
-    } as any)
+    const finalData = { ...enriched, ...formData, ai_confidence: enriched?.ai_confidence ?? null }
+    if (!finalData.cellar_section) {
+      finalData.cellar_section = assignSection(finalData.varietal_blend, sectionLabels ?? {})
+    }
+    await createWine(finalData as any)
     handleClose()
   }
 

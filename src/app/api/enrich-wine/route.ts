@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { anthropic } from '@/lib/anthropic'
 import { buildEnrichmentSystemPrompt, buildEnrichmentUserMessage } from '@/lib/wine-prompts'
-import { getCellarContext, getSectionCounts } from '@/actions/wines'
+import { getCellarContext } from '@/actions/wines'
 import { checkApiAuth } from '@/lib/api-auth'
 import { logSystemAlert } from '@/lib/alerts'
 
@@ -30,9 +30,9 @@ export async function POST(req: NextRequest) {
   if (authError) return authError
 
   const known = await req.json()
-  const [cellarContext, sectionCounts] = await Promise.all([getCellarContext(), getSectionCounts()])
+  const cellarContext = await getCellarContext()
 
-  const systemPrompt = buildEnrichmentSystemPrompt(cellarContext, sectionCounts)
+  const systemPrompt = buildEnrichmentSystemPrompt(cellarContext)
   const userMessage = buildEnrichmentUserMessage(known)
 
   try {
