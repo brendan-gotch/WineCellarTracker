@@ -322,8 +322,6 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
       ;(async () => {
         for (let i = 0; i < allWines.length; i += ENRICH_CONCURRENCY) {
           await Promise.all(allWines.slice(i, i + ENRICH_CONCURRENCY).map(async (w: any, j: number) => {
-            // Stagger calls within a wave so web searches don't fire simultaneously
-            if (j > 0) await new Promise(resolve => setTimeout(resolve, j * 2000))
             const entryId = entries[i + j].id
             const qty = w.quantity ?? 1
             try {
