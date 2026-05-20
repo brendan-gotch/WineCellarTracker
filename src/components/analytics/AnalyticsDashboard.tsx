@@ -24,8 +24,23 @@ interface Props {
   drankLog: DrankLog[]
 }
 
+function formatDate(date: Date): string {
+  return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+}
+
 export function AnalyticsDashboard({ wines, drankLog }: Props) {
   const activeWines = wines.filter(w => w.quantity_remaining > 0)
+
+  // Build map from ALL wines (including consumed) for drank log lookups
+  const wineMap = useMemo(() => {
+    const map: Record<string, Wine> = {}
+    wines.forEach(w => { map[w.id] = w })
+    return map
+  }, [wines])
+
+  const sortedDrankLog = useMemo(() => {
+    return [...drankLog].sort((a, b) => b.date_drank.getTime() - a.date_drank.getTime())
+  }, [drankLog])
   const totalBottles = activeWines.reduce((s, w) => s + w.quantity_remaining, 0)
 
   const byVarietal = useMemo(() => {
@@ -141,6 +156,67 @@ export function AnalyticsDashboard({ wines, drankLog }: Props) {
                   <Bar dataKey="value" fill="#be123c" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Drinking History */}
+      <div className="space-y-3">
+        <h2 className="font-semibold text-lg">Drinking History</h2>
+        {drankLog.length === 0 ? (
+          <div className="rounded-lg border border-border bg-card p-8 text-center text-muted-foreground">
+            No bottles logged yet — hit 🍷 on any wine to start your history
+          </div>
+        ) : (
+          <div className="rounded-lg border border-border overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50 border-b border-border">
+                  <tr>
+                    <th className="text-left px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">Date</th>
+                    <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Wine</th>
+                    <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Vintage</th>
+                    <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Rating</th>
+                    <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Occasion</th>
+                    <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedDrankLog.map((entry) => {
+                    const wine = wineMap[entry.wine_id]
+                    return (
+                      <tr key={entry.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
+                          {formatDate(entry.date_drank)}
+                        </td>
+                        <td className="px-4 py-3 max-w-xs">
+                          {wine ? (
+                            <>
+                              <div className="font-medium truncate">{wine.winery}</div>
+                              <div className="text-xs text-muted-foreground truncate">{wine.wine_name}</div>
+                            </>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 font-mono text-muted-foreground">
+                          {wine?.non_vintage ? 'NV' : (wine?.vintage ?? '—')}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
+                          {entry.rating != null ? `${entry.rating} / 5` : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {entry.occasion ?? '—'}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">
+                          {entry.notes ?? '—'}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         )}

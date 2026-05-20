@@ -92,7 +92,7 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
   const [page, setPage] = useState(0)
 
   const countries = useMemo(() => Array.from(new Set(wines.map((w) => w.country).filter(Boolean))).sort() as string[], [wines])
-  const sections = useMemo(() => Array.from(new Set(wines.map((w) => w.cellar_section).filter(Boolean))).sort() as string[], [wines])
+  const sections = useMemo(() => Array.from(new Set(wines.map((w) => w.cellar_section).filter(Boolean))).sort((a, b) => parseInt(a as string) - parseInt(b as string)) as string[], [wines])
 
   const filtered = useMemo(() => {
     let list = wines.filter((w) => w.quantity_remaining > 0)

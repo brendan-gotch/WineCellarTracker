@@ -3,30 +3,30 @@ import type { Wine } from '@/db/schema'
 export const SECTION_COUNT = 10
 
 export const BASE_SECTION_LABELS: Record<number, string> = {
-  1: 'Sparkling',
-  2: 'Light Whites',
-  3: 'Medium Whites',
-  4: 'Full Whites',
-  5: 'Light Reds',
-  6: 'Medium-Light Reds',
-  7: 'Medium Reds',
-  8: 'Medium-Full Reds',
-  9: 'Full Reds',
-  10: 'Big / Age-Worthy Reds',
+  1: '1 — Champagne & Sparkling',
+  2: '2 — Whites',
+  3: '3 — Whites',
+  4: '4 — Whites',
+  5: '5 — Reds',
+  6: '6 — Reds',
+  7: '7 — Reds',
+  8: '8 — Reds',
+  9: '9 — Reds',
+  10: '10 — Reds',
 }
 
 // Shown when a section has no wines yet
 const SECTION_EXAMPLE_LABELS: Record<number, string> = {
-  1: '1 — Sparkling (Champagne, Pét-Nat)',
-  2: '2 — Light Whites (Pinot Grigio, Muscadet)',
-  3: '3 — Medium Whites (Sauvignon Blanc, Grüner)',
-  4: '4 — Full Whites (Chardonnay, Viognier)',
-  5: '5 — Light Reds (Gamay, light Pinot Noir)',
-  6: '6 — Medium Reds (Grenache, richer Pinot Noir)',
-  7: '7 — Medium Reds (Sangiovese, Tempranillo)',
-  8: '8 — Medium-Full Reds (Zinfandel, GSM)',
-  9: '9 — Full Reds (Cab Sauvignon, Syrah)',
-  10: '10 — Big Reds (Barolo, Brunello, Amarone)',
+  1: '1 — Champagne & Sparkling',
+  2: '2 — Whites (Pinot Grigio, Muscadet)',
+  3: '3 — Whites (Sauvignon Blanc, Grüner)',
+  4: '4 — Whites (Chardonnay, Viognier)',
+  5: '5 — Reds (Gamay, Pinot Noir)',
+  6: '6 — Reds (Grenache, Pinot Noir)',
+  7: '7 — Reds (Sangiovese, Tempranillo)',
+  8: '8 — Reds (Zinfandel, GSM)',
+  9: '9 — Reds (Cab Sauvignon, Syrah)',
+  10: '10 — Reds (Barolo, Brunello)',
 }
 
 export const SECTION_STYLE_GUIDE = `
@@ -60,6 +60,10 @@ export function computeSectionLabels(wines: Wine[]): Record<number, string> {
 
   const labels: Record<number, string> = {}
   for (let i = 1; i <= 10; i++) {
+    if (i === 1) {
+      labels[i] = '1 — Champagne & Sparkling'
+      continue
+    }
     const varietals = bySection[i] ?? []
     if (varietals.length === 0) {
       labels[i] = SECTION_EXAMPLE_LABELS[i]
@@ -68,7 +72,8 @@ export function computeSectionLabels(wines: Wine[]): Record<number, string> {
       const freq: Record<string, number> = {}
       varietals.forEach(v => { freq[v] = (freq[v] || 0) + 1 })
       const top = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k]) => k)
-      labels[i] = `${i} (${top.join(' & ')})`
+      const category = i <= 4 ? 'Whites' : 'Reds'
+      labels[i] = `${i} — ${category} (${top.join(', ')})`
     }
   }
   return labels
