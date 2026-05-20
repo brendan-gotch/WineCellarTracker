@@ -318,7 +318,7 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
 
       // Enrich in batches of 3 — fully parallel overwhelms Anthropic rate limits,
       // fully sequential is too slow; 3 concurrent is a good middle ground
-      const ENRICH_CONCURRENCY = 3
+      const ENRICH_CONCURRENCY = 2
       ;(async () => {
         for (let i = 0; i < allWines.length; i += ENRICH_CONCURRENCY) {
           await Promise.all(allWines.slice(i, i + ENRICH_CONCURRENCY).map(async (w: any, j: number) => {
