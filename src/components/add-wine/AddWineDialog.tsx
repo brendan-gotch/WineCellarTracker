@@ -25,6 +25,7 @@ interface WineEntry {
   enriched: any | null
   enriching: boolean
   formData: any
+  userEdited: boolean
   expanded: boolean
   saved: boolean
   duplicate: Wine | null
@@ -309,6 +310,7 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
           enriched: null,
           enriching: true,
           formData: parsed,
+          userEdited: false,
           expanded: i === 0,
           saved: false,
           duplicate: findDuplicate(existingWines, w.winery, w.wine_name, w.vintage),
@@ -344,7 +346,7 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
                 merged.winery = canonicalizeWinery(merged.winery, existingWines.map(e => e.winery))
               }
               setWines(prev => prev.map(e => e.id === entryId
-                ? { ...e, enriched: merged, formData: merged, enriching: false }
+                ? { ...e, enriched: merged, formData: e.userEdited ? e.formData : merged, enriching: false }
                 : e
               ))
             } catch {
@@ -361,7 +363,7 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
   }
 
   const updateFormData = (id: string, data: any) => {
-    setWines(prev => prev.map(e => e.id === id ? { ...e, formData: data } : e))
+    setWines(prev => prev.map(e => e.id === id ? { ...e, formData: data, userEdited: true } : e))
   }
 
   const toggleExpanded = (id: string) => {

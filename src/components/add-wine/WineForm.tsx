@@ -247,7 +247,7 @@ export function WineForm({ initial = {}, aiConfidence, enrichSupplement, section
           <SelectContent>
             {Array.from({ length: SECTION_COUNT }, (_, i) => i + 1).map((n) => (
               <SelectItem key={n} value={String(n)}>
-                {sectionLabels?.[n] ?? `${n} — ${BASE_SECTION_LABELS[n]}`}
+                {sectionLabels?.[n] ?? BASE_SECTION_LABELS[n]}
               </SelectItem>
             ))}
           </SelectContent>
