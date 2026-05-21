@@ -1,7 +1,7 @@
 import { sqliteTable, text, integer, real, index } from 'drizzle-orm/sqlite-core'
 import { sql } from 'drizzle-orm'
 
-export const BOTTLE_FORMATS = ['375ml', '750ml', '1.5L', '3L', '6L', '9L', '12L', 'other'] as const
+export const BOTTLE_FORMATS = ['187ml', '375ml', '500ml', '750ml', '1L', '1.5L', '3L', '4.5L', '5L', '6L', '9L', '12L', '15L', '18L', 'other'] as const
 export const PRIORITIES = ['low', 'medium', 'high'] as const
 export const DRINKING_STATUSES = ['not_ready', 'ready', 'peak', 'past_peak', 'overdue', 'unknown'] as const
 

@@ -89,6 +89,11 @@ Common patterns:
 - "arnot roberts pinot 2018, der keil 2022, teutonic pinot meunier 2024 - 3 bottles" → three wines, last has 3 bottles
 - "6 bottles of 2019 Kistler Chardonnay Les Noisetiers" → one wine, 6 bottles
 - "2021 Miles Garrett Dragon Field Blend" → one wine, winery=Miles Garrett, wine_name=Dragon, varietal_blend=Field Blend
+- "magnum of 2018 Kistler" → format="1.5L"
+- "3L double magnum Opus One 2019" → format="3L"
+- "half bottle 2022 Sauternes" → format="375ml"
+
+Format values: "187ml", "375ml", "500ml", "750ml", "1L", "1.5L", "3L", "4.5L", "5L", "6L", "9L", "12L", "15L", "18L", "other". Default to null (not "750ml") when not specified.
 
 For fields you're uncertain about, use null — but always return the winery and wine_name if you can parse them from the text, even if confidence is lower.
 Confidence scores: 1.0 = certain, 0.9 = very confident, 0.7–0.8 = likely, below 0.7 = uncertain.
@@ -109,6 +114,7 @@ RESPOND WITH VALID JSON ONLY, no markdown, no explanation:
       "varietal_blend": string | null,
       "country": string | null,
       "region": string | null,
+      "format": string | null,
       "quantity": number,
       "notes": string | null,
       "confidence": {
