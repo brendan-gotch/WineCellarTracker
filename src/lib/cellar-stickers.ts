@@ -45,10 +45,11 @@ export function computeOptimalYear(
   windowEnd: number | null | undefined,
 ): number | null {
   if (!windowStart && !windowEnd) return null
-  if (windowStart) {
-    const threeIn = windowStart + 3
-    return windowEnd ? Math.min(threeIn, windowEnd) : threeIn
+  if (windowStart && windowEnd) {
+    const midpoint = Math.floor((windowStart + windowEnd) / 2)
+    return midpoint - 3
   }
+  if (windowStart) return windowStart
   return windowEnd!
 }
 
