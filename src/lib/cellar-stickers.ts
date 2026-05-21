@@ -46,8 +46,7 @@ export function computeOptimalYear(
 ): number | null {
   if (!windowStart && !windowEnd) return null
   if (windowStart && windowEnd) {
-    const midpoint = Math.floor((windowStart + windowEnd) / 2)
-    return midpoint - 3
+    return Math.floor(windowStart + (windowEnd - windowStart) / 3)
   }
   if (windowStart) return windowStart
   return windowEnd!
