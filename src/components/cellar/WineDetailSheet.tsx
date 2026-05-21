@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { WineForm } from '@/components/add-wine/WineForm'
@@ -10,7 +10,9 @@ import type { Wine } from '@/db/schema'
 import { computeStickerColor, STICKER_COLORS, STICKER_YEAR_RANGES } from '@/lib/cellar-stickers'
 import { cn } from '@/lib/utils'
 import { apiHeaders } from '@/lib/api-auth'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, Layers } from 'lucide-react'
+import { computeVerticals, indexVerticals } from '@/lib/verticals'
+import { computeDrinkingStatus, DRINKING_STATUS_LABELS, DRINKING_STATUS_BADGE_STYLES } from '@/lib/drinking-status'
 
 interface Props {
   wine: Wine
@@ -18,13 +20,22 @@ interface Props {
   onClose: () => void
   onDrank: () => void
   sectionLabels?: Record<number, string>
+  allWines?: Wine[]
+  onNavigate?: (wine: Wine) => void
 }
 
-export function WineDetailSheet({ wine, open, onClose, onDrank, sectionLabels }: Props) {
+export function WineDetailSheet({ wine, open, onClose, onDrank, sectionLabels, allWines, onNavigate }: Props) {
   const [editing, setEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [refreshingFact, setRefreshingFact] = useState(false)
   const [localFact, setLocalFact] = useState<string | null | undefined>(undefined)
+
+  const vertical = useMemo(() => {
+    if (!allWines?.length) return null
+    const verticals = computeVerticals(allWines)
+    const index = indexVerticals(verticals)
+    return index.get(wine.id) ?? null
+  }, [wine.id, allWines])
 
   const displayFact = localFact !== undefined ? localFact : wine.why_interesting
 
@@ -109,6 +120,47 @@ export function WineDetailSheet({ wine, open, onClose, onDrank, sectionLabels }:
                 : <p className="text-amber-600/60 dark:text-amber-400/60 italic">No interesting fact yet — click ↻ to generate one.</p>
               }
             </div>
+
+            {vertical && (
+              <div className="p-3 bg-violet-50 dark:bg-violet-950/20 border border-violet-200 dark:border-violet-800 rounded-md">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Layers className="h-3.5 w-3.5 text-violet-500" />
+                  <span className="text-xs font-medium text-violet-700 dark:text-violet-300">
+                    Vertical · {vertical.vintages.length} vintages ({vertical.vintages[0]}–{vertical.vintages[vertical.vintages.length - 1]})
+                  </span>
+                </div>
+                <div className="space-y-0.5">
+                  {vertical.wines.map(w => {
+                    const isCurrent = w.id === wine.id
+                    const status = computeDrinkingStatus(w.drinking_window_start, w.drinking_window_end)
+                    const styles = DRINKING_STATUS_BADGE_STYLES[status]
+                    return (
+                      <div
+                        key={w.id}
+                        className={cn(
+                          'flex items-center gap-2 rounded px-2 py-1 text-sm',
+                          isCurrent
+                            ? 'bg-violet-100 dark:bg-violet-900/30'
+                            : 'hover:bg-violet-100/50 dark:hover:bg-violet-900/20 cursor-pointer'
+                        )}
+                        onClick={() => !isCurrent && onNavigate?.(w)}
+                      >
+                        <span className={cn('font-mono w-10 text-right shrink-0', isCurrent ? 'font-bold text-foreground' : 'text-muted-foreground')}>
+                          {w.vintage}
+                        </span>
+                        <span
+                          className="rounded-full text-[10px] font-medium px-2 py-0.5 shrink-0"
+                          style={{ background: styles.background, color: styles.color }}
+                        >
+                          {DRINKING_STATUS_LABELS[status]}
+                        </span>
+                        <span className="text-xs text-muted-foreground ml-auto shrink-0">{w.quantity_remaining} btl</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             {wine.notes && (
               <div>

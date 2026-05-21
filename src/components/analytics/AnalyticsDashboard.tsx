@@ -8,6 +8,9 @@ import {
   PieChart, Pie, Cell, Legend
 } from 'recharts'
 import { computeSectionLabels, SECTION_COUNT } from '@/lib/cellar-sections'
+import { computeVerticals } from '@/lib/verticals'
+import { DRINKING_STATUS_BADGE_STYLES } from '@/lib/drinking-status'
+import { Layers } from 'lucide-react'
 
 const COLORS = ['#be123c', '#e11d48', '#f43f5e', '#fb7185', '#fda4af', '#fecdd3']
 
@@ -90,6 +93,7 @@ export function AnalyticsDashboard({ wines, drankLog }: Props) {
   const avgPricePerBottle = pricedBottles > 0 ? cellarValue / pricedBottles : null
 
   const sectionLabels = useMemo(() => computeSectionLabels(activeWines), [activeWines])
+  const verticals = useMemo(() => computeVerticals(activeWines), [activeWines])
 
   const bySection = useMemo(() => {
     return Array.from({ length: SECTION_COUNT }, (_, i) => i + 1).map(n => {
@@ -152,6 +156,51 @@ export function AnalyticsDashboard({ wines, drankLog }: Props) {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Verticals */}
+      {verticals.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <h2 className="font-semibold">Verticals</h2>
+            <span className="text-xs text-muted-foreground bg-muted rounded-full px-2 py-0.5">{verticals.length}</span>
+          </div>
+          <div className="space-y-2">
+            {verticals.map(v => (
+              <div key={v.key} className="rounded-lg border border-violet-200 dark:border-violet-800 bg-violet-50/50 dark:bg-violet-950/10 p-4">
+                <div className="flex items-start justify-between gap-4 mb-3">
+                  <div className="flex items-start gap-2">
+                    <Layers className="h-4 w-4 text-violet-400 mt-0.5 shrink-0" />
+                    <div>
+                      <div className="font-medium text-sm">{v.winery}</div>
+                      <div className="text-xs text-muted-foreground">{v.wine_name}</div>
+                    </div>
+                  </div>
+                  <div className="text-right text-xs shrink-0">
+                    <div className="font-medium text-violet-700 dark:text-violet-300">{v.vintages.length} vintages</div>
+                    <div className="text-muted-foreground">{v.totalBottles} btl</div>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {v.wines.map(w => {
+                    const styles = DRINKING_STATUS_BADGE_STYLES[computeDrinkingStatus(w.drinking_window_start, w.drinking_window_end)]
+                    return (
+                      <span
+                        key={w.id}
+                        className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium"
+                        style={{ background: styles.background, color: styles.color }}
+                        title={`${w.quantity_remaining} btl`}
+                      >
+                        {w.vintage}
+                        <span className="opacity-60">· {w.quantity_remaining}</span>
+                      </span>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

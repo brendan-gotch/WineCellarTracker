@@ -7,7 +7,7 @@ import { DrankItDialog } from '@/components/drank/DrankItDialog'
 import { WineDetailSheet } from './WineDetailSheet'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Search, SortAsc, Wine as WineIcon, AlertTriangle } from 'lucide-react'
+import { Search, SortAsc, Wine as WineIcon, AlertTriangle, Layers, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BASE_SECTION_LABELS } from '@/lib/cellar-sections'
 import { updateWine } from '@/actions/wines'
@@ -15,6 +15,7 @@ import {
   computeStickerColor, STICKER_COLORS, STICKER_YEAR_RANGES,
   STICKER_ORDER, type StickerColor,
 } from '@/lib/cellar-stickers'
+import { computeVerticals, indexVerticals } from '@/lib/verticals'
 
 type SortKey = 'vintage' | 'winery' | 'country' | 'region' | 'cellar_section' | 'drinking_window_start' | 'quantity_remaining' | 'format' | 'status' | 'sticker' | 'price'
 type SortDir = 'asc' | 'desc'
@@ -86,10 +87,15 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
   const [filterSticker, setFilterSticker] = useState('all')
   const [sortKey, setSortKey] = useState<SortKey>('vintage')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
+  const [filterVerticalKey, setFilterVerticalKey] = useState<string | null>(null)
   const [drankWine, setDrankWine] = useState<Wine | null>(null)
   const [detailWine, setDetailWine] = useState<Wine | null>(null)
   const [pageSize, setPageSize] = useState<number | 'all'>(50)
   const [page, setPage] = useState(0)
+
+  const verticals = useMemo(() => computeVerticals(wines), [wines])
+  const verticalIndex = useMemo(() => indexVerticals(verticals), [verticals])
+  const activeVertical = filterVerticalKey ? verticals.find(v => v.key === filterVerticalKey) ?? null : null
 
   const countries = useMemo(() => Array.from(new Set(wines.map((w) => w.country).filter(Boolean))).sort() as string[], [wines])
   const sections = useMemo(() => Array.from(new Set(wines.map((w) => w.cellar_section).filter(Boolean))).sort((a, b) => parseInt(a as string) - parseInt(b as string)) as string[], [wines])
@@ -112,6 +118,9 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
     if (filterSection !== 'all') list = list.filter((w) => w.cellar_section === filterSection)
     if (filterSticker !== 'all') {
       list = list.filter((w) => computeStickerColor(w.drinking_window_start, w.drinking_window_end) === filterSticker)
+    }
+    if (filterVerticalKey) {
+      list = list.filter((w) => verticalIndex.get(w.id)?.key === filterVerticalKey)
     }
 
     list = [...list].sort((a, b) => {
@@ -139,7 +148,7 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
     })
 
     return list
-  }, [wines, search, filterStatus, filterCountry, filterSection, filterSticker, sortKey, sortDir])
+  }, [wines, search, filterStatus, filterCountry, filterSection, filterSticker, filterVerticalKey, sortKey, sortDir, verticalIndex])
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
@@ -178,7 +187,7 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
     await updateWine(id, parsed)
   }
 
-  const isFiltered = search || filterStatus !== 'all' || filterCountry !== 'all' || filterSection !== 'all' || filterSticker !== 'all'
+  const isFiltered = search || filterStatus !== 'all' || filterCountry !== 'all' || filterSection !== 'all' || filterSticker !== 'all' || filterVerticalKey
 
   return (
     <div className="space-y-4">
@@ -262,6 +271,23 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
         </Select>
       </div>
 
+      {/* Vertical filter pill */}
+      {activeVertical && (
+        <div className="flex items-center gap-2 -mt-1">
+          <span className="flex items-center gap-1.5 rounded-full bg-violet-100 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 text-xs px-2.5 py-1 font-medium">
+            <Layers className="h-3 w-3" />
+            {activeVertical.winery} · {activeVertical.wine_name}
+            <button
+              onClick={() => { setFilterVerticalKey(null); setPage(0) }}
+              className="ml-0.5 hover:opacity-60 transition-opacity"
+              title="Clear vertical filter"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </span>
+        </div>
+      )}
+
       {/* Sticker legend */}
       <div className="flex items-center gap-x-4 gap-y-1 flex-wrap text-muted-foreground" style={{ fontSize: '11px' }}>
         <span className="font-medium">Sticker:</span>
@@ -333,8 +359,24 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
                       />
                     </td>
                     <td className="px-3 py-3 max-w-0 w-[32%]">
-                      <div className="font-medium truncate">
-                        <InlineEdit value={wine.winery} onSave={save(wine.id, 'winery')} />
+                      <div className="flex items-center gap-1.5">
+                        <div className="font-medium truncate flex-1 min-w-0">
+                          <InlineEdit value={wine.winery} onSave={save(wine.id, 'winery')} />
+                        </div>
+                        {verticalIndex.has(wine.id) && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              const vKey = verticalIndex.get(wine.id)!.key
+                              setFilterVerticalKey(prev => prev === vKey ? null : vKey)
+                              setPage(0)
+                            }}
+                            title={`Vertical · ${verticalIndex.get(wine.id)!.vintages.length} vintages`}
+                            className="shrink-0 text-violet-400 hover:text-violet-600 dark:hover:text-violet-300 transition-colors"
+                          >
+                            <Layers className="h-3 w-3" />
+                          </button>
+                        )}
                       </div>
                       <div className="text-muted-foreground text-xs truncate">
                         <InlineEdit
@@ -454,7 +496,7 @@ export function CellarGrid({ wines, sectionLabels }: Props) {
         <DrankItDialog key={drankWine.id} wine={drankWine} open={true} onClose={() => setDrankWine(null)} />
       )}
       {detailWine && (
-        <WineDetailSheet key={detailWine.id} wine={detailWine} open={true} sectionLabels={sectionLabels} onClose={() => setDetailWine(null)} onDrank={() => { setDetailWine(null); setDrankWine(detailWine) }} />
+        <WineDetailSheet key={detailWine.id} wine={detailWine} open={true} sectionLabels={sectionLabels} allWines={wines} onClose={() => setDetailWine(null)} onDrank={() => { setDetailWine(null); setDrankWine(detailWine) }} onNavigate={(w) => setDetailWine(w)} />
       )}
     </div>
   )
