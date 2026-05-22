@@ -8,7 +8,7 @@ import { WineForm } from './WineForm'
 import { createWine } from '@/actions/wines'
 import type { Wine } from '@/db/schema'
 import { apiHeaders } from '@/lib/api-auth'
-import { Camera, PenLine, MessageSquare, Loader2, AlertCircle, ChevronDown, ChevronUp, Check, X } from 'lucide-react'
+import { Camera, PenLine, MessageSquare, Loader2, AlertCircle, ChevronDown, ChevronUp, Check, X, RefreshCw } from 'lucide-react'
 import { assignSection } from '@/lib/cellar-sections'
 
 type Mode = 'choose' | 'manual' | 'scan' | 'natural'
@@ -25,6 +25,7 @@ interface WineEntry {
   parsed: any
   enriched: any | null
   enriching: boolean
+  enrichFailed: boolean
   formData: any
   userEdited: boolean
   expanded: boolean
@@ -317,6 +318,7 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
           parsed,
           enriched: null,
           enriching: true,
+          enrichFailed: false,
           formData: parsed,
           userEdited: false,
           expanded: i === 0,
@@ -356,12 +358,13 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
               if (!merged.cellar_section) {
                 merged.cellar_section = assignSection(merged.varietal_blend as string, sectionLabels ?? {}, { region: merged.region as string })
               }
+              const stillEmpty = !enriched.drinking_window_start && !enriched.varietal_blend && !enriched.country && !enriched.price
               setWines(prev => prev.map(e => e.id === entryId
-                ? { ...e, enriched: merged, formData: e.userEdited ? e.formData : merged, enriching: false }
+                ? { ...e, enriched: merged, formData: e.userEdited ? e.formData : merged, enriching: false, enrichFailed: stillEmpty }
                 : e
               ))
             } catch {
-              setWines(prev => prev.map(e => e.id === entryId ? { ...e, enriching: false } : e))
+              setWines(prev => prev.map(e => e.id === entryId ? { ...e, enriching: false, enrichFailed: true } : e))
             }
           }))
         }
@@ -379,6 +382,33 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
 
   const toggleExpanded = (id: string) => {
     setWines(prev => prev.map(e => e.id === id ? { ...e, expanded: !e.expanded } : e))
+  }
+
+  const reEnrich = async (entryId: string) => {
+    const entry = wines.find(e => e.id === entryId)
+    if (!entry) return
+    setWines(prev => prev.map(e => e.id === entryId ? { ...e, enriching: true, enrichFailed: false } : e))
+    try {
+      const w = entry.parsed
+      const qty = w.quantity_added ?? w.quantity ?? 1
+      const body = JSON.stringify({ ...w, quantity_added: qty, quantity_remaining: qty })
+      const res = await fetch('/api/enrich-wine', { method: 'POST', headers: apiHeaders(), body })
+      const enriched = await res.json()
+      const merged = mergeData({ ...w, quantity_added: qty, quantity_remaining: qty }, enriched)
+      if (typeof merged.winery === 'string') {
+        merged.winery = canonicalizeWinery(merged.winery, existingWines.map(e => e.winery))
+      }
+      if (!merged.cellar_section) {
+        merged.cellar_section = assignSection(merged.varietal_blend as string, sectionLabels ?? {}, { region: merged.region as string })
+      }
+      const stillEmpty = !enriched.drinking_window_start && !enriched.varietal_blend && !enriched.country && !enriched.price
+      setWines(prev => prev.map(e => e.id === entryId
+        ? { ...e, enriched: merged, formData: e.userEdited ? e.formData : merged, enriching: false, enrichFailed: stillEmpty }
+        : e
+      ))
+    } catch {
+      setWines(prev => prev.map(e => e.id === entryId ? { ...e, enriching: false, enrichFailed: true } : e))
+    }
   }
 
   const handleSaveAll = async () => {
@@ -515,18 +545,30 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
                   <div className="flex items-center gap-3">
                     {wine.saved && <Check className="h-4 w-4 text-green-500 shrink-0" />}
                     {wine.enriching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />}
+                    {wine.enrichFailed && !wine.enriching && <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />}
                     <div>
                       <span className="font-medium">{wineLabel(wine)}</span>
                       {wine.duplicate && !wine.enriching && (
                         <span className="ml-2 text-xs text-amber-600 dark:text-amber-400">⚠ Already in cellar ({wine.duplicate.quantity_remaining} bottles)</span>
                       )}
                       {wine.enriching && <span className="text-xs text-muted-foreground ml-2">Enriching...</span>}
-                      {wine.formData.varietal_blend && !wine.enriching && (
+                      {wine.enrichFailed && !wine.enriching && <span className="text-xs text-amber-500 ml-2">Enrichment incomplete</span>}
+                      {wine.formData.varietal_blend && !wine.enriching && !wine.enrichFailed && (
                         <span className="text-xs text-muted-foreground ml-2">{wine.formData.varietal_blend}</span>
                       )}
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
+                    {wine.enrichFailed && !wine.enriching && !wine.saved && (
+                      <button
+                        type="button"
+                        className="p-1 text-amber-500 hover:text-amber-700 transition-colors"
+                        title="Retry enrichment"
+                        onClick={(e) => { e.stopPropagation(); reEnrich(wine.id) }}
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                      </button>
+                    )}
                     {!wine.saved && (
                       <button
                         type="button"
