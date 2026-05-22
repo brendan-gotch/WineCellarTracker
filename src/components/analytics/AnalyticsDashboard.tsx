@@ -92,6 +92,38 @@ export function AnalyticsDashboard({ wines, drankLog }: Props) {
   const pricedBottles = pricedWines.reduce((s, w) => s + w.quantity_remaining, 0)
   const avgPricePerBottle = pricedBottles > 0 ? cellarValue / pricedBottles : null
 
+  // Weighted median — expand each wine into individual bottle prices, find middle
+  const medianPrice = useMemo(() => {
+    const prices: number[] = []
+    pricedWines.forEach(w => {
+      for (let i = 0; i < w.quantity_remaining; i++) prices.push(w.price!)
+    })
+    if (!prices.length) return null
+    prices.sort((a, b) => a - b)
+    const mid = Math.floor(prices.length / 2)
+    return prices.length % 2 === 0 ? (prices[mid - 1] + prices[mid]) / 2 : prices[mid]
+  }, [pricedWines])
+
+  const minPrice = pricedWines.length ? Math.min(...pricedWines.map(w => w.price!)) : null
+  const maxPrice = pricedWines.length ? Math.max(...pricedWines.map(w => w.price!)) : null
+
+  const byVintage = useMemo(() => {
+    const map: Record<number, number> = {}
+    activeWines.forEach(w => {
+      if (w.vintage) map[w.vintage] = (map[w.vintage] || 0) + w.quantity_remaining
+    })
+    return Object.entries(map)
+      .sort(([a], [b]) => Number(a) - Number(b))
+      .map(([name, value]) => ({ name, value }))
+  }, [activeWines])
+
+  const topByValue = useMemo(() => {
+    return pricedWines
+      .map(w => ({ ...w, totalValue: (w.price ?? 0) * w.quantity_remaining }))
+      .sort((a, b) => b.totalValue - a.totalValue)
+      .slice(0, 10)
+  }, [pricedWines])
+
   const sectionLabels = useMemo(() => computeSectionLabels(activeWines), [activeWines])
   const verticals = useMemo(() => computeVerticals(activeWines), [activeWines])
 
@@ -116,13 +148,15 @@ export function AnalyticsDashboard({ wines, drankLog }: Props) {
     <div className="space-y-8">
       <h1 className="text-2xl font-bold">Analytics</h1>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <StatCard label="Wines in cellar" value={activeWines.length} />
         <StatCard label="Total bottles" value={totalBottles} />
         <StatCard label="Bottles consumed" value={drankLog.length} />
         <StatCard label="Avg rating" value={avgRating} />
         <StatCard label="Cellar value" value={`$${cellarValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`} />
-        <StatCard label="Avg $ / bottle" value={avgPricePerBottle != null ? `$${avgPricePerBottle.toFixed(2)}` : '—'} />
+        <StatCard label="Avg $ / bottle" value={avgPricePerBottle != null ? `$${avgPricePerBottle.toFixed(0)}` : '—'} />
+        <StatCard label="Median $ / bottle" value={medianPrice != null ? `$${medianPrice.toFixed(0)}` : '—'} />
+        <StatCard label="Price range" value={minPrice != null ? `$${minPrice}–$${maxPrice}` : '—'} />
       </div>
 
       {/* By Section */}
@@ -135,7 +169,9 @@ export function AnalyticsDashboard({ wines, drankLog }: Props) {
                 <tr>
                   <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Section</th>
                   <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">Wines</th>
+                  <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">%</th>
                   <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">Bottles</th>
+                  <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">%</th>
                   <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">Value</th>
                   <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">Avg $/btl</th>
                 </tr>
@@ -145,7 +181,9 @@ export function AnalyticsDashboard({ wines, drankLog }: Props) {
                   <tr key={s.n} className="border-b border-border/50 last:border-0">
                     <td className="px-4 py-2.5">{s.label}</td>
                     <td className="px-4 py-2.5 text-right text-muted-foreground">{s.wines}</td>
+                    <td className="px-4 py-2.5 text-right text-muted-foreground/60 text-xs">{Math.round(s.wines / activeWines.length * 100)}%</td>
                     <td className="px-4 py-2.5 text-right font-medium">{s.bottles}</td>
+                    <td className="px-4 py-2.5 text-right text-muted-foreground/60 text-xs">{totalBottles > 0 ? Math.round(s.bottles / totalBottles * 100) : 0}%</td>
                     <td className="px-4 py-2.5 text-right text-muted-foreground">
                       {s.value > 0 ? `$${s.value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : '—'}
                     </td>
@@ -263,7 +301,61 @@ export function AnalyticsDashboard({ wines, drankLog }: Props) {
             </div>
           </div>
         )}
+
+        {byVintage.length > 0 && (
+          <div className="space-y-3">
+            <h2 className="font-semibold">Bottles by Vintage</h2>
+            <div className="h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={byVintage}>
+                  <XAxis dataKey="name" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                  <Tooltip />
+                  <Bar dataKey="value" fill="#be123c" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Top wines by total value */}
+      {topByValue.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="font-semibold">Most Valuable Holdings</h2>
+          <div className="rounded-lg border border-border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 border-b border-border">
+                <tr>
+                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Wine</th>
+                  <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">Vintage</th>
+                  <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">$/btl</th>
+                  <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">Qty</th>
+                  <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topByValue.map(w => (
+                  <tr key={w.id} className="border-b border-border/50 last:border-0">
+                    <td className="px-4 py-2.5">
+                      <div className="font-medium">{w.winery}</div>
+                      <div className="text-xs text-muted-foreground">{w.wine_name}</div>
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-mono text-muted-foreground">
+                      {w.non_vintage ? 'NV' : (w.vintage ?? '—')}
+                    </td>
+                    <td className="px-4 py-2.5 text-right text-muted-foreground">${w.price?.toFixed(0)}</td>
+                    <td className="px-4 py-2.5 text-right text-muted-foreground">{w.quantity_remaining}</td>
+                    <td className="px-4 py-2.5 text-right font-medium">
+                      ${w.totalValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Drinking History */}
       <div className="space-y-3">
