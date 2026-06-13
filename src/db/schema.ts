@@ -37,6 +37,7 @@ export const wines = sqliteTable('wines', {
   price:                 real('price'),
   notes:                 text('notes'),
   why_interesting:       text('why_interesting'),
+  perfect_pairing:       text('perfect_pairing'),
   ai_confidence:         text('ai_confidence', { mode: 'json' }).$type<Record<string, number>>(),
   last_verified:         integer('last_verified', { mode: 'timestamp' }),
   created_at:            integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),

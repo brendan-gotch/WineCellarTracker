@@ -50,6 +50,7 @@ export function WineForm({ initial = {}, aiConfidence, enrichSupplement, section
     price: undefined,
     notes: '',
     why_interesting: '',
+    perfect_pairing: '',
     ...initial,
   })
   const [saving, setSaving] = useState(false)
@@ -264,6 +265,18 @@ export function WineForm({ initial = {}, aiConfidence, enrichSupplement, section
           onChange={(e) => set('why_interesting', e.target.value)}
           placeholder="What makes this wine worth having..."
           rows={2}
+        />
+      </div>
+
+      <div className="space-y-1">
+        <Label>
+          Perfect Pairing
+          <ConfidenceHint field="perfect_pairing" confidence={aiConfidence} />
+        </Label>
+        <Input
+          value={form.perfect_pairing ?? ''}
+          onChange={(e) => set('perfect_pairing', e.target.value)}
+          placeholder="The single best food pairing..."
         />
       </div>
 

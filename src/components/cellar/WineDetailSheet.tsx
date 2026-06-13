@@ -29,6 +29,7 @@ export function WineDetailSheet({ wine, open, onClose, onDrank, sectionLabels, a
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [refreshingFact, setRefreshingFact] = useState(false)
   const [localFact, setLocalFact] = useState<string | null | undefined>(undefined)
+  const [localPairing, setLocalPairing] = useState<string | null | undefined>(undefined)
 
   const vertical = useMemo(() => {
     if (!allWines?.length) return null
@@ -38,6 +39,7 @@ export function WineDetailSheet({ wine, open, onClose, onDrank, sectionLabels, a
   }, [wine.id, allWines])
 
   const displayFact = localFact !== undefined ? localFact : wine.why_interesting
+  const displayPairing = localPairing !== undefined ? localPairing : wine.perfect_pairing
 
   const refreshFact = async () => {
     setRefreshingFact(true)
@@ -48,9 +50,17 @@ export function WineDetailSheet({ wine, open, onClose, onDrank, sectionLabels, a
         body: JSON.stringify({ ...wine, _refreshFact: true }),
       })
       const data = await res.json()
+      const updates: Record<string, unknown> = {}
       if (data.why_interesting) {
         setLocalFact(data.why_interesting)
-        await updateWine(wine.id, { why_interesting: data.why_interesting })
+        updates.why_interesting = data.why_interesting
+      }
+      if (data.perfect_pairing) {
+        setLocalPairing(data.perfect_pairing)
+        updates.perfect_pairing = data.perfect_pairing
+      }
+      if (Object.keys(updates).length > 0) {
+        await updateWine(wine.id, updates)
       }
     } finally {
       setRefreshingFact(false)
@@ -118,6 +128,24 @@ export function WineDetailSheet({ wine, open, onClose, onDrank, sectionLabels, a
               {displayFact
                 ? <p className="text-amber-700 dark:text-amber-300">{displayFact}</p>
                 : <p className="text-amber-600/60 dark:text-amber-400/60 italic">No interesting fact yet — click ↻ to generate one.</p>
+              }
+            </div>
+
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-md text-sm">
+              <div className="flex items-center justify-between mb-1">
+                <div className="font-medium text-emerald-800 dark:text-emerald-200">🍽️ Perfect pairing</div>
+                <button
+                  onClick={refreshFact}
+                  disabled={refreshingFact}
+                  className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-200 disabled:opacity-40 transition-colors"
+                  title="Refresh pairing"
+                >
+                  <RefreshCw className={cn('h-3.5 w-3.5', refreshingFact && 'animate-spin')} />
+                </button>
+              </div>
+              {displayPairing
+                ? <p className="text-emerald-700 dark:text-emerald-300">{displayPairing}</p>
+                : <p className="text-emerald-600/60 dark:text-emerald-400/60 italic">No pairing yet — click ↻ to generate one.</p>
               }
             </div>
 

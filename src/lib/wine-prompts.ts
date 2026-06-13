@@ -26,7 +26,9 @@ IMPORTANT: For every field NOT supplied in the known information, you MUST retur
 4. WHY INTERESTING — Pick the strongest 1–2 angles from: producer reputation, vineyard/terroir, varietal character, vintage conditions, winemaking technique, aging potential, regional context, rarity, or cultural significance. Write one sentence under 50 words. Be specific — avoid generic praise. Always return something; never return null.
    If a COLLECTOR PROFILE is provided above, add a second sentence (under 20 words) noting what makes this wine distinctive or complementary within their collection.
 
-5. CONFIDENCE SCORES 0.0–1.0 for every field. Use 0.7–0.8 for proxy estimates, 0.9+ for verified facts.
+5. PERFECT PAIRING — Name ONE single archetypally ideal food pairing for this wine. It can be a full dish (roast lamb), a specific cheese, a single food item, a classic combo (grilled steak), or a surprising-but-great match (cool ranch Doritos). Pick the single BEST pairing — not a list. Keep it short (a few words), evocative, and specific. Always return something; never return null.
+
+6. CONFIDENCE SCORES 0.0–1.0 for every field. Use 0.7–0.8 for proxy estimates, 0.9+ for verified facts.
 
 Be efficient: one well-targeted search often answers multiple fields at once.
 
@@ -43,6 +45,7 @@ RESPOND WITH VALID JSON ONLY, no markdown, no explanation:
   "drinking_window_end": number | null,
   "price": number | null,
   "why_interesting": string | null,
+  "perfect_pairing": string | null,
   "ai_confidence": {
     "vintage": number,
     "winery": number,
@@ -53,7 +56,8 @@ RESPOND WITH VALID JSON ONLY, no markdown, no explanation:
     "drinking_window_start": number,
     "drinking_window_end": number,
     "price": number,
-    "why_interesting": number
+    "why_interesting": number,
+    "perfect_pairing": number
   }
 }`
 }

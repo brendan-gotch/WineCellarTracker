@@ -102,7 +102,7 @@ function RefreshFactsTool({ wines }: { wines: Wine[] }) {
           })
           const data = await res.json()
           if (data.why_interesting) {
-            await updateWineFact(wine.id, data.why_interesting)
+            await updateWineFact(wine.id, data.why_interesting, data.perfect_pairing)
           }
         } catch {
           setErrors(e => e + 1)

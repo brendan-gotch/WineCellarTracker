@@ -118,10 +118,10 @@ export async function applySectionReassignment(changes: Array<{ id: string; cell
   revalidatePath('/')
 }
 
-export async function updateWineFact(id: string, why_interesting: string): Promise<void> {
+export async function updateWineFact(id: string, why_interesting: string, perfect_pairing?: string): Promise<void> {
   const userId = await requireUserId()
   await db.update(wines)
-    .set({ why_interesting, updated_at: new Date() })
+    .set({ why_interesting, ...(perfect_pairing ? { perfect_pairing } : {}), updated_at: new Date() })
     .where(and(eq(wines.id, id), eq(wines.user_id, userId)))
   revalidatePath('/')
 }
