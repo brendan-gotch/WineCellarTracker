@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { ThemeProvider } from 'next-themes'
 import { TopNav } from '@/components/layout/TopNav'
 import { AdminAlerts } from '@/components/layout/AdminAlerts'
+import { SommChatWidget } from '@/components/somm/SommChatWidget'
 import { getSession } from '@/lib/session'
 import { db } from '@/db'
 import { users } from '@/db/schema'
@@ -32,6 +33,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <main className="max-w-7xl mx-auto px-4 py-6">
             {children}
           </main>
+          {session && <SommChatWidget />}
         </ThemeProvider>
       </body>
     </html>
