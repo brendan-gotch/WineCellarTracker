@@ -717,6 +717,8 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
                   sectionLabels={sectionLabels}
                   onSubmit={handleSaveScanned}
                   submitLabel="Save Wine"
+                  submitDisabled={scanEnrichingBg}
+                  submitDisabledLabel="Waiting for Claude to finish researching..."
                 />
               </>
             )}

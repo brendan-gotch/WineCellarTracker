@@ -23,6 +23,8 @@ interface Props {
   isEditMode?: boolean
   onSubmit: (data: WineFormData) => Promise<void>
   submitLabel?: string
+  submitDisabled?: boolean
+  submitDisabledLabel?: string
 }
 
 function ConfidenceHint({ field, confidence }: { field: string; confidence?: Record<string, number> }) {
@@ -33,7 +35,7 @@ function ConfidenceHint({ field, confidence }: { field: string; confidence?: Rec
   return <span className={`ml-1 text-xs ${color}`}>{label}</span>
 }
 
-export function WineForm({ initial = {}, aiConfidence, enrichSupplement, sectionLabels, isEditMode = false, onSubmit, submitLabel = 'Save Wine' }: Props) {
+export function WineForm({ initial = {}, aiConfidence, enrichSupplement, sectionLabels, isEditMode = false, onSubmit, submitLabel = 'Save Wine', submitDisabled = false, submitDisabledLabel }: Props) {
   const [form, setForm] = useState<WineFormData>({
     winery: '',
     wine_name: '',
@@ -290,8 +292,8 @@ export function WineForm({ initial = {}, aiConfidence, enrichSupplement, section
         />
       </div>
 
-      <Button type="submit" disabled={saving} className="w-full">
-        {saving ? 'Saving...' : submitLabel}
+      <Button type="submit" disabled={saving || submitDisabled} className="w-full">
+        {saving ? 'Saving...' : submitDisabled ? (submitDisabledLabel ?? 'Waiting for details...') : submitLabel}
       </Button>
     </form>
   )
