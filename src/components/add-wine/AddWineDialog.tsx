@@ -61,6 +61,101 @@ function canonicalizeWinery(suggested: string, existingWineries: string[]): stri
   return suggested
 }
 
+function wineEntryLabel(w: WineEntry): string {
+  const d = w.formData
+  return [d.vintage, d.winery, d.wine_name].filter(Boolean).join(' ') || 'Unknown Wine'
+}
+
+function WineEntryRow({
+  wine, sectionLabels, onToggle, onRemove, onRetry, onUpdate,
+}: {
+  wine: WineEntry
+  sectionLabels?: Record<number, string>
+  onToggle: () => void
+  onRemove: () => void
+  onRetry: () => void
+  onUpdate: (data: any) => Promise<void>
+}) {
+  return (
+    <div className="rounded-lg border border-border overflow-hidden">
+      <button
+        className="w-full flex items-center justify-between p-3 hover:bg-accent/50 transition-colors text-left"
+        onClick={onToggle}
+      >
+        <div className="flex items-center gap-3">
+          {wine.saved && <Check className="h-4 w-4 text-green-500 shrink-0" />}
+          {wine.enriching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />}
+          {wine.enrichFailed && !wine.enriching && <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />}
+          <div>
+            <span className="font-medium">{wineEntryLabel(wine)}</span>
+            {wine.duplicate && !wine.enriching && (
+              <span className="ml-2 text-xs text-amber-600 dark:text-amber-400">⚠ Already in cellar ({wine.duplicate.quantity_remaining} bottles)</span>
+            )}
+            {wine.enriching && <span className="text-xs text-muted-foreground ml-2">Enriching...</span>}
+            {wine.enrichFailed && !wine.enriching && <span className="text-xs text-amber-500 ml-2">Enrichment incomplete</span>}
+            {wine.formData.varietal_blend && !wine.enriching && !wine.enrichFailed && (
+              <span className="text-xs text-muted-foreground ml-2">{wine.formData.varietal_blend}</span>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          {wine.enrichFailed && !wine.enriching && !wine.saved && (
+            <button
+              type="button"
+              className="p-1 text-amber-500 hover:text-amber-700 transition-colors"
+              title="Retry enrichment"
+              onClick={(e) => { e.stopPropagation(); onRetry() }}
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
+          )}
+          {!wine.saved && (
+            <button
+              type="button"
+              className="p-1 text-muted-foreground hover:text-destructive transition-colors"
+              title="Remove from this batch"
+              onClick={(e) => { e.stopPropagation(); onRemove() }}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+          {wine.expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+        </div>
+      </button>
+
+      {wine.expanded && !wine.enriching && (
+        <div className="p-3 border-t border-border bg-background/50">
+          {wine.duplicate && (
+            <div className="mb-3 p-2.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md text-sm text-amber-800 dark:text-amber-200">
+              ⚠ You already have <strong>{wine.duplicate.quantity_remaining}</strong> bottle{wine.duplicate.quantity_remaining !== 1 ? 's' : ''} of this in your cellar. Adding another anyway.
+            </div>
+          )}
+          {wine.enriched?.why_interesting && (
+            <div className="mb-3 p-2.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md text-sm">
+              <span className="font-medium text-amber-800 dark:text-amber-200">✨ </span>
+              <span className="text-amber-700 dark:text-amber-300">{wine.enriched.why_interesting}</span>
+            </div>
+          )}
+          <WineForm
+            key={wine.id}
+            initial={wine.formData}
+            aiConfidence={wine.enriched?.ai_confidence}
+            sectionLabels={sectionLabels}
+            onSubmit={onUpdate}
+            submitLabel="Done ✓"
+          />
+        </div>
+      )}
+
+      {wine.expanded && wine.enriching && (
+        <div className="p-4 border-t border-border text-sm text-muted-foreground flex items-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin" /> Claude is filling in details...
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Resize image to max 1280px on longest side before upload (big win for iPhone photos)
 async function resizeImage(base64: string, mimeType: string): Promise<string> {
   return new Promise((resolve) => {
@@ -91,12 +186,8 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
   const [parseError, setParseError] = useState('')
   const [apiError, setApiError] = useState('')   // billing / auth errors shown prominently
 
-  // Scan state
-  const [scannedData, setScannedData] = useState<any>(null)
-  const [scanEnrichRaw, setScanEnrichRaw] = useState<any>(null)  // raw enrichment for supplement
-  const [scanLoading, setScanLoading] = useState(false)     // reading label
-  const [scanEnrichingBg, setScanEnrichingBg] = useState(false)  // enriching in background
-  const [scanDuplicate, setScanDuplicate] = useState<Wine | null>(null)
+  // Scan state — scanned wines accumulate into `wines` (same shape/flow as natural-language batch entry)
+  const [scanLoading, setScanLoading] = useState(false)     // reading the current label photo
 
   // Camera state
   const [cameraActive, setCameraActive] = useState(false)
@@ -122,11 +213,7 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
     setNaturalText('')
     setWines([])
     setParseError('')
-    setScannedData(null)
-    setScanEnrichRaw(null)
     setScanLoading(false)
-    setScanEnrichingBg(false)
-    setScanDuplicate(null)
     setManualDuplicate(null)
     setApiError('')
     stopCamera()
@@ -192,7 +279,7 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
     setMode('scan')
 
     try {
-      // Step 1: Scan label (fast ~5s) — show form immediately
+      // Step 1: Scan label (fast ~5s) — add it to the review list immediately
       const scanRes = await fetch('/api/scan-label', {
         method: 'POST',
         headers: apiHeaders(),
@@ -213,36 +300,29 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
         return
       }
 
-      setScannedData(scanned)
+      const qty = scanned.quantity ?? 1
+      const parsed = { ...scanned, quantity_added: qty, quantity_remaining: qty }
+      delete parsed.quantity
+
+      const entry: WineEntry = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        parsed,
+        enriched: null,
+        enriching: true,
+        enrichFailed: false,
+        formData: parsed,
+        userEdited: false,
+        expanded: true,
+        saved: false,
+        duplicate: findDuplicate(existingWines, parsed.winery, parsed.wine_name, parsed.vintage),
+      }
+
+      // Collapse previously scanned entries, append the new one, and let it expand
+      setWines(prev => [...prev.map(e => ({ ...e, expanded: false })), entry])
       setScanLoading(false)
 
-      // Check for duplicate
-      if (scanned.winery || scanned.wine_name) {
-        setScanDuplicate(findDuplicate(existingWines, scanned.winery, scanned.wine_name, scanned.vintage))
-      }
-
-      // Step 2: Enrich in background — form is already showing
-      setScanEnrichingBg(true)
-      try {
-        const enrichRes = await fetch('/api/enrich-wine', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...scanned }),
-        })
-        const enriched = await enrichRes.json()
-        if (!enriched.cellar_section) {
-          enriched.cellar_section = assignSection(
-            enriched.varietal_blend ?? scanned.varietal_blend,
-            sectionLabels ?? {},
-            { region: enriched.region ?? scanned.region }
-          )
-        }
-        setScanEnrichRaw(enriched)
-      } catch {
-        // Enrichment failed silently — form still works with scan data
-      } finally {
-        setScanEnrichingBg(false)
-      }
+      // Step 2: Enrich this entry in the background — reviewer can keep scanning meanwhile
+      await enrichEntry(entry.id, parsed)
     } catch {
       setCameraError('Scan failed. Try uploading a photo instead.')
       setScanLoading(false)
@@ -384,12 +464,9 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
     setWines(prev => prev.map(e => e.id === id ? { ...e, expanded: !e.expanded } : e))
   }
 
-  const reEnrich = async (entryId: string) => {
-    const entry = wines.find(e => e.id === entryId)
-    if (!entry) return
-    setWines(prev => prev.map(e => e.id === entryId ? { ...e, enriching: true, enrichFailed: false } : e))
+  // Enrich a single entry in place (used by scan-as-you-go and manual retry)
+  const enrichEntry = async (entryId: string, w: any) => {
     try {
-      const w = entry.parsed
       const qty = w.quantity_added ?? w.quantity ?? 1
       const body = JSON.stringify({ ...w, quantity_added: qty, quantity_remaining: qty })
       const res = await fetch('/api/enrich-wine', { method: 'POST', headers: apiHeaders(), body })
@@ -411,6 +488,13 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
     }
   }
 
+  const reEnrich = async (entryId: string) => {
+    const entry = wines.find(e => e.id === entryId)
+    if (!entry) return
+    setWines(prev => prev.map(e => e.id === entryId ? { ...e, enriching: true, enrichFailed: false } : e))
+    await enrichEntry(entryId, entry.parsed)
+  }
+
   const handleSaveAll = async () => {
     setSavingAll(true)
     try {
@@ -426,19 +510,6 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
     } finally {
       setSavingAll(false)
     }
-  }
-
-  const handleSaveScanned = async (formData: any) => {
-    await createWine({
-      ...formData,
-      ai_confidence: scanEnrichRaw?.ai_confidence ?? null,
-    })
-    handleClose()
-  }
-
-  const wineLabel = (w: WineEntry) => {
-    const d = w.formData
-    return [d.vintage, d.winery, d.wine_name].filter(Boolean).join(' ') || 'Unknown Wine'
   }
 
   const handleManualSubmit = async (formData: any) => {
@@ -466,7 +537,7 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
             {mode === 'choose' && 'Add Wine'}
             {mode === 'manual' && 'Add Wine'}
             {mode === 'natural' && (wines.length > 1 ? `Review ${wines.length} Wines` : 'Add Wine')}
-            {mode === 'scan' && 'Label Scan'}
+            {mode === 'scan' && (wines.length > 0 ? `Review ${wines.length} Wine${wines.length > 1 ? 's' : ''}` : 'Label Scan')}
           </DialogTitle>
         </DialogHeader>
 
@@ -489,15 +560,15 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
               </div>
             </button>
 
-            <button onClick={() => { setMode('scan'); if (!isMobile) setCameraRequested(true) }} className="w-full flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-accent transition-colors text-left">
+            <button onClick={() => { setWines([]); setMode('scan'); if (!isMobile) setCameraRequested(true) }} className="w-full flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-accent transition-colors text-left">
               <Camera className="h-5 w-5 text-muted-foreground shrink-0" />
               <div>
                 <div className="font-medium">Scan Label</div>
-                <div className="text-sm text-muted-foreground">{isMobile ? 'Take a photo, Claude reads the label' : 'Use your camera or upload a photo'}</div>
+                <div className="text-sm text-muted-foreground">{isMobile ? 'Take photos, Claude reads each label — scan as many bottles as you like' : 'Use your camera or upload photos — scan as many bottles as you like'}</div>
               </div>
             </button>
 
-            <button onClick={() => setMode('natural')} className="w-full flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-accent transition-colors text-left">
+            <button onClick={() => { setWines([]); setMode('natural') }} className="w-full flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-accent transition-colors text-left">
               <MessageSquare className="h-5 w-5 text-muted-foreground shrink-0" />
               <div>
                 <div className="font-medium">Just Type It</div>
@@ -537,82 +608,15 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
         {mode === 'natural' && wines.length > 0 && (
           <div className="space-y-3 py-2">
             {wines.map((wine) => (
-              <div key={wine.id} className="rounded-lg border border-border overflow-hidden">
-                <button
-                  className="w-full flex items-center justify-between p-3 hover:bg-accent/50 transition-colors text-left"
-                  onClick={() => toggleExpanded(wine.id)}
-                >
-                  <div className="flex items-center gap-3">
-                    {wine.saved && <Check className="h-4 w-4 text-green-500 shrink-0" />}
-                    {wine.enriching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />}
-                    {wine.enrichFailed && !wine.enriching && <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />}
-                    <div>
-                      <span className="font-medium">{wineLabel(wine)}</span>
-                      {wine.duplicate && !wine.enriching && (
-                        <span className="ml-2 text-xs text-amber-600 dark:text-amber-400">⚠ Already in cellar ({wine.duplicate.quantity_remaining} bottles)</span>
-                      )}
-                      {wine.enriching && <span className="text-xs text-muted-foreground ml-2">Enriching...</span>}
-                      {wine.enrichFailed && !wine.enriching && <span className="text-xs text-amber-500 ml-2">Enrichment incomplete</span>}
-                      {wine.formData.varietal_blend && !wine.enriching && !wine.enrichFailed && (
-                        <span className="text-xs text-muted-foreground ml-2">{wine.formData.varietal_blend}</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    {wine.enrichFailed && !wine.enriching && !wine.saved && (
-                      <button
-                        type="button"
-                        className="p-1 text-amber-500 hover:text-amber-700 transition-colors"
-                        title="Retry enrichment"
-                        onClick={(e) => { e.stopPropagation(); reEnrich(wine.id) }}
-                      >
-                        <RefreshCw className="h-4 w-4" />
-                      </button>
-                    )}
-                    {!wine.saved && (
-                      <button
-                        type="button"
-                        className="p-1 text-muted-foreground hover:text-destructive transition-colors"
-                        title="Remove from this batch"
-                        onClick={(e) => { e.stopPropagation(); setWines(prev => prev.filter(w => w.id !== wine.id)) }}
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    )}
-                    {wine.expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-                  </div>
-                </button>
-
-                {wine.expanded && !wine.enriching && (
-                  <div className="p-3 border-t border-border bg-background/50">
-                    {wine.duplicate && (
-                      <div className="mb-3 p-2.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md text-sm text-amber-800 dark:text-amber-200">
-                        ⚠ You already have <strong>{wine.duplicate.quantity_remaining}</strong> bottle{wine.duplicate.quantity_remaining !== 1 ? 's' : ''} of this in your cellar. Adding another anyway.
-                      </div>
-                    )}
-                    {wine.enriched?.why_interesting && (
-                      <div className="mb-3 p-2.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md text-sm">
-                        <span className="font-medium text-amber-800 dark:text-amber-200">✨ </span>
-                        <span className="text-amber-700 dark:text-amber-300">{wine.enriched.why_interesting}</span>
-                      </div>
-                    )}
-                    <WineForm
-                      key={wine.id}
-                      initial={wine.formData}
-                      aiConfidence={wine.enriched?.ai_confidence}
-                      sectionLabels={sectionLabels}
-                      onSubmit={async (data) => { updateFormData(wine.id, data); toggleExpanded(wine.id) }}
-                      submitLabel="Done ✓"
-                    />
-                  </div>
-                )}
-
-                {wine.expanded && wine.enriching && (
-                  <div className="p-4 border-t border-border text-sm text-muted-foreground flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" /> Claude is filling in details...
-                  </div>
-                )}
-              </div>
+              <WineEntryRow
+                key={wine.id}
+                wine={wine}
+                sectionLabels={sectionLabels}
+                onToggle={() => toggleExpanded(wine.id)}
+                onRemove={() => setWines(prev => prev.filter(w => w.id !== wine.id))}
+                onRetry={() => reEnrich(wine.id)}
+                onUpdate={async (data) => { updateFormData(wine.id, data); toggleExpanded(wine.id) }}
+              />
             ))}
 
             <div className="flex gap-2 pt-2">
@@ -628,11 +632,34 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
           </div>
         )}
 
-        {/* Scan mode */}
+        {/* Scan mode — scan as many bottles as you like, then review/save together */}
         {mode === 'scan' && (
           <div className="space-y-4 py-2">
+            {wines.length > 0 && (
+              <div className="space-y-3">
+                {wines.map((wine) => (
+                  <WineEntryRow
+                    key={wine.id}
+                    wine={wine}
+                    sectionLabels={sectionLabels}
+                    onToggle={() => toggleExpanded(wine.id)}
+                    onRemove={() => setWines(prev => prev.filter(w => w.id !== wine.id))}
+                    onRetry={() => reEnrich(wine.id)}
+                    onUpdate={async (data) => { updateFormData(wine.id, data); toggleExpanded(wine.id) }}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Reading the current label photo */}
+            {scanLoading && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground p-4 bg-muted rounded-md">
+                <Loader2 className="h-4 w-4 animate-spin" /> Reading label... (this takes about 5 seconds)
+              </div>
+            )}
+
             {/* Desktop camera */}
-            {!isMobile && !scannedData && (
+            {!isMobile && !scanLoading && (
               <div className="space-y-3">
                 <div className={cameraActive ? 'space-y-3' : 'hidden'}>
                   <div className="relative rounded-lg overflow-hidden bg-black aspect-video">
@@ -653,7 +680,9 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
                       </div>
                     )}
                     <div className="flex gap-2">
-                      <Button onClick={startCamera} className="flex-1">Use Camera</Button>
+                      <Button onClick={startCamera} className="flex-1" variant={wines.length ? 'outline' : 'default'}>
+                        {wines.length ? 'Scan Another Bottle' : 'Use Camera'}
+                      </Button>
                       <label className="flex-1">
                         <Button variant="outline" className="w-full" asChild><span>Upload Photo</span></Button>
                         <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFileCapture} />
@@ -665,7 +694,7 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
             )}
 
             {/* Mobile file input */}
-            {isMobile && !scannedData && !scanLoading && (
+            {isMobile && !scanLoading && (
               <div className="space-y-2">
                 {cameraError && (
                   <div className="text-sm text-destructive flex items-center gap-2">
@@ -673,58 +702,29 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
                   </div>
                 )}
                 <label className="block">
-                  <Button className="w-full" asChild><span>📸 Take Photo / Upload</span></Button>
+                  <Button className="w-full" variant={wines.length ? 'outline' : 'default'} asChild>
+                    <span>📸 {wines.length ? 'Scan Another Bottle' : 'Take Photo / Upload'}</span>
+                  </Button>
                   <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="hidden" onChange={handleFileCapture} />
                 </label>
               </div>
             )}
 
-            {/* Step 1: Reading label */}
-            {scanLoading && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground p-4 bg-muted rounded-md">
-                <Loader2 className="h-4 w-4 animate-spin" /> Reading label... (this takes about 5 seconds)
+            {wines.length > 0 ? (
+              <div className="flex gap-2 pt-2">
+                <Button variant="outline" onClick={() => setWines([])} className="shrink-0">Clear All</Button>
+                <Button
+                  onClick={handleSaveAll}
+                  disabled={savingAll || scanLoading || wines.some(w => w.enriching)}
+                  className="flex-1"
+                >
+                  {savingAll ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Saving...</> : `Save All ${wines.length} Wine${wines.length > 1 ? 's' : ''}`}
+                </Button>
               </div>
-            )}
-
-            {/* Step 2+: Form shown immediately after scan, with background enrichment indicator */}
-            {!scanLoading && scannedData && (
-              <>
-                {scanDuplicate && (
-                  <div className="p-2.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md text-sm text-amber-800 dark:text-amber-200">
-                    ⚠ You already have <strong>{scanDuplicate.quantity_remaining}</strong> bottle{scanDuplicate.quantity_remaining !== 1 ? 's' : ''} of this in your cellar.
-                  </div>
-                )}
-
-                {scanEnrichingBg && (
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Claude is researching this wine and filling in more details...
-                  </div>
-                )}
-
-                {scanEnrichRaw?.why_interesting && (
-                  <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md text-sm">
-                    <span className="font-medium text-amber-800 dark:text-amber-200">✨ </span>
-                    <span className="text-amber-700 dark:text-amber-300">{scanEnrichRaw.why_interesting}</span>
-                  </div>
-                )}
-
-                <WineForm
-                  key="scan"
-                  initial={scannedData}
-                  aiConfidence={scanEnrichRaw?.ai_confidence}
-                  enrichSupplement={scanEnrichRaw}
-                  sectionLabels={sectionLabels}
-                  onSubmit={handleSaveScanned}
-                  submitLabel="Save Wine"
-                  submitDisabled={scanEnrichingBg}
-                  submitDisabledLabel="Waiting for Claude to finish researching..."
-                />
-              </>
-            )}
-
-            {!scannedData && !scanLoading && (
-              <Button variant="ghost" className="w-full" onClick={() => { setMode('choose'); stopCamera() }}>← Back</Button>
+            ) : (
+              !scanLoading && !cameraActive && (
+                <Button variant="ghost" className="w-full" onClick={() => { setMode('choose'); stopCamera() }}>← Back</Button>
+              )
             )}
           </div>
         )}
