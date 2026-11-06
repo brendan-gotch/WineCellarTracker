@@ -90,3 +90,81 @@ input::placeholder,
 textarea::placeholder {
   opacity: 0.35;
 }
+
+/* Wine list — printable restaurant-style list */
+.wine-list-paper {
+  background: #fff;
+  color: #1a1a1a;
+  font-family: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
+  border-radius: 0.5rem;
+  padding: 2rem 2.5rem;
+  border: 1px solid hsl(var(--border));
+}
+
+.wine-list-category { margin-bottom: 2.5rem; }
+.wine-list-category:last-child { margin-bottom: 0; }
+
+.wine-list-category-title {
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.wine-list-color { margin-bottom: 1.25rem; }
+.wine-list-color:last-child { margin-bottom: 0; }
+
+.wine-list-color-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+
+.wine-list-country { margin-bottom: 0.6rem; margin-left: 0.5rem; }
+.wine-list-country-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 0.15rem;
+}
+
+.wine-list-region { margin-left: 0.75rem; margin-bottom: 0.3rem; }
+.wine-list-region-title {
+  font-size: 0.78rem;
+  font-style: italic;
+  color: #555;
+  margin-bottom: 0.1rem;
+}
+
+.wine-list-entry {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.wine-list-entry-name { white-space: normal; }
+.wine-list-entry-qty { color: #777; font-size: 0.72rem; }
+
+.wine-list-entry-leader {
+  flex: 1;
+  border-bottom: 1px dotted #bbb;
+  margin: 0 0.25rem;
+  min-width: 0.5rem;
+}
+
+.wine-list-entry-price {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: #333;
+}
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; }
+  .wine-list-paper { border: none; padding: 0; }
+}

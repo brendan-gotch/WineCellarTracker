@@ -48,12 +48,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <TopNav username={session?.username} isAdmin={session?.username === process.env.ADMIN_USERNAME} />
-          {session?.username === process.env.ADMIN_USERNAME && <AdminAlerts />}
-          <main className="max-w-7xl mx-auto px-4 py-6">
+          <div className="no-print">
+            <TopNav username={session?.username} isAdmin={session?.username === process.env.ADMIN_USERNAME} />
+          </div>
+          {session?.username === process.env.ADMIN_USERNAME && <div className="no-print"><AdminAlerts /></div>}
+          <main className="max-w-7xl mx-auto px-4 py-6 print:max-w-none print:p-0">
             {children}
           </main>
-          {session && <SommChatWidget />}
+          {session && <div className="no-print"><SommChatWidget /></div>}
         </ThemeProvider>
       </body>
     </html>

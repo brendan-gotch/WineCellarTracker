@@ -18,6 +18,7 @@ export function TopNav({ username, isAdmin }: Props) {
 
   const links = [
     { href: '/', label: 'Cellar' },
+    { href: '/wine-list', label: 'Wine List' },
     { href: '/analytics', label: 'Analytics' },
     { href: '/audit', label: 'Audit' },
     ...(isAdmin ? [{ href: '/admin', label: 'Admin' }] : []),
