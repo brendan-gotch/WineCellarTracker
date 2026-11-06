@@ -31,7 +31,7 @@ export function TopNav({ username, isAdmin }: Props) {
   }
 
   return (
-    <header style={{ background: 'var(--nav-bg)', borderBottom: '1px solid var(--nav-border)' }} className="sticky top-0 z-40">
+    <header style={{ background: 'var(--nav-bg)', borderBottom: '1px solid var(--nav-border)', paddingTop: 'env(safe-area-inset-top)' }} className="sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-2 font-semibold text-lg" style={{ color: 'var(--nav-text-active)' }}>
