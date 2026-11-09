@@ -19,6 +19,7 @@ export function TopNav({ username, isAdmin }: Props) {
   const links = [
     { href: '/', label: 'Cellar' },
     { href: '/wine-list', label: 'Wine List' },
+    { href: '/drank', label: 'Drank' },
     { href: '/analytics', label: 'Analytics' },
     { href: '/audit', label: 'Audit' },
     ...(isAdmin ? [{ href: '/admin', label: 'Admin' }] : []),
@@ -32,12 +33,12 @@ export function TopNav({ username, isAdmin }: Props) {
 
   return (
     <header style={{ background: 'var(--nav-bg)', borderBottom: '1px solid var(--nav-border)', paddingTop: 'env(safe-area-inset-top)' }} className="sticky top-0 z-40">
-      <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center gap-2 font-semibold text-lg" style={{ color: 'var(--nav-text-active)' }}>
+      <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-4 min-w-0">
+          <Link href="/" className="flex items-center gap-2 font-semibold text-lg shrink-0" style={{ color: 'var(--nav-text-active)' }}>
             🍷 <span className="hidden sm:inline">Wine Cellar</span>
           </Link>
-          <nav className="flex gap-1">
+          <nav className="flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {links.map((link) => (
               <Link
                 key={link.href}
@@ -46,14 +47,14 @@ export function TopNav({ username, isAdmin }: Props) {
                   ? { color: 'var(--nav-accent)', background: 'rgba(192,56,90,0.12)' }
                   : { color: 'var(--nav-text)' }
                 }
-                className="px-3 py-1.5 rounded-md text-sm font-medium transition-colors hover:bg-white/5"
+                className="px-3 py-1.5 rounded-md text-sm font-medium transition-colors hover:bg-white/5 shrink-0"
               >
                 {link.label}
               </Link>
             ))}
           </nav>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {username && (
             <span className="text-sm hidden sm:block" style={{ color: 'var(--nav-text)' }}>{username}</span>
           )}

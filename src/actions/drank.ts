@@ -48,3 +48,28 @@ export async function updateDrankEntry(id: string, data: Partial<NewDrankLog>) {
   revalidatePath('/')
   return result[0]
 }
+
+export async function getDrankHistory() {
+  const userId = await requireUserId()
+  return db
+    .select({
+      id: drank_log.id,
+      wine_id: drank_log.wine_id,
+      date_drank: drank_log.date_drank,
+      rating: drank_log.rating,
+      notes: drank_log.notes,
+      occasion: drank_log.occasion,
+      winery: wines.winery,
+      wine_name: wines.wine_name,
+      vintage: wines.vintage,
+      non_vintage: wines.non_vintage,
+      varietal_blend: wines.varietal_blend,
+      country: wines.country,
+      region: wines.region,
+      price: wines.price,
+    })
+    .from(drank_log)
+    .innerJoin(wines, eq(drank_log.wine_id, wines.id))
+    .where(eq(drank_log.user_id, userId))
+    .orderBy(desc(drank_log.date_drank))
+}
