@@ -436,7 +436,7 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
                 merged.winery = canonicalizeWinery(merged.winery, existingWines.map(e => e.winery))
               }
               if (!merged.cellar_section) {
-                merged.cellar_section = assignSection(merged.varietal_blend as string, sectionLabels ?? {}, { region: merged.region as string })
+                merged.cellar_section = assignSection(merged.varietal_blend as string, sectionLabels ?? {}, { region: merged.region as string, wineName: merged.wine_name as string })
               }
               const stillEmpty = !enriched.drinking_window_start && !enriched.varietal_blend && !enriched.country && !enriched.price
               setWines(prev => prev.map(e => e.id === entryId
@@ -476,7 +476,7 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
         merged.winery = canonicalizeWinery(merged.winery, existingWines.map(e => e.winery))
       }
       if (!merged.cellar_section) {
-        merged.cellar_section = assignSection(merged.varietal_blend as string, sectionLabels ?? {}, { region: merged.region as string })
+        merged.cellar_section = assignSection(merged.varietal_blend as string, sectionLabels ?? {}, { region: merged.region as string, wineName: merged.wine_name as string })
       }
       const stillEmpty = !enriched.drinking_window_start && !enriched.varietal_blend && !enriched.country && !enriched.price
       setWines(prev => prev.map(e => e.id === entryId
@@ -523,7 +523,7 @@ export function AddWineDialog({ open, onClose, sectionLabels, existingWines = []
     // User values always win: spread enriched first, then override with formData
     const finalData = { ...enriched, ...formData, ai_confidence: enriched?.ai_confidence ?? null }
     if (!finalData.cellar_section) {
-      finalData.cellar_section = assignSection(finalData.varietal_blend, sectionLabels ?? {}, { region: finalData.region })
+      finalData.cellar_section = assignSection(finalData.varietal_blend, sectionLabels ?? {}, { region: finalData.region, wineName: finalData.wine_name })
     }
     await createWine(finalData as any)
     handleClose()

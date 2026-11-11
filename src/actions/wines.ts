@@ -104,7 +104,7 @@ export async function previewSectionReassignment(): Promise<Array<{
       wine_name: w.wine_name,
       varietal_blend: w.varietal_blend,
       currentSection: w.cellar_section,
-      proposedSection: assignSection(w.varietal_blend, sectionLabels, { region: w.region }),
+      proposedSection: assignSection(w.varietal_blend, sectionLabels, { region: w.region, wineName: w.wine_name }),
     }))
     .filter(w => w.currentSection !== '1' && w.proposedSection !== null && w.proposedSection !== w.currentSection)
 }

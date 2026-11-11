@@ -141,14 +141,24 @@ const SPARKLING_REGIONS = [
   'sekt', 'mousseux', 'espumante', 'espumoso', 'cap classique',
 ]
 
+// Checked with highest priority against varietal + wine name combined — catches wines
+// whose grape/region keyword would otherwise misclassify them as a red (e.g. a Mourvèdre-based
+// Bandol Rosé, or a White Zinfandel) when nothing in the varietal_blend text alone says "rosé".
+const ROSE_OVERRIDE_KEYWORDS = [
+  'rosé', 'rose', 'rosato', 'rosado', 'blush', 'vin gris', 'white zinfandel', 'white merlot', 'tavel',
+]
+
 export function assignSection(
   varietal: string | null | undefined,
   sectionLabels: Record<number, string>,
-  hints?: { region?: string | null },
+  hints?: { region?: string | null; wineName?: string | null },
 ): string | null {
   // Region beats varietal — a Champagne-region Chardonnay is still sparkling
   const regionLower = (hints?.region ?? '').toLowerCase()
   if (regionLower && SPARKLING_REGIONS.some(r => regionLower.includes(r))) return '1'
+
+  const combined = `${varietal ?? ''} ${hints?.wineName ?? ''}`.toLowerCase()
+  if (ROSE_OVERRIDE_KEYWORDS.some(k => combined.includes(k))) return '5'
 
   if (!varietal) return null
   const v = varietal.toLowerCase()
