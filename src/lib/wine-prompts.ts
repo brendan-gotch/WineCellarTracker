@@ -15,6 +15,8 @@ IMPORTANT: For every field NOT supplied in the known information, you MUST retur
 
 1. FILL IN MISSING FIELDS: vintage, non_vintage, winery, wine_name, varietal_blend, country, region
    non_vintage: set to true for intentionally non-vintage wines (NV Champagne, NV Cava, etc.).
+   country: always use the full standard English name, never an abbreviation (e.g. "United States", not "USA" or "US").
+   region: the single most specific named appellation/AVA only — no county, state, or country appended, and no "AVA"/"AOC"/"DOCG" suffix (e.g. "Alexander Valley", not "Alexander Valley, Sonoma County, California" or "Alexander Valley AVA").
 
 2. DRINKING WINDOW — do at most 2 web searches total, in this priority order:
    - First: search "[producer] [wine name] [vintage] drinking window" — covers exact wine
@@ -101,6 +103,8 @@ Format values: "187ml", "375ml", "500ml", "750ml", "1L", "1.5L", "3L", "4.5L", "
 
 For fields you're uncertain about, use null — but always return the winery and wine_name if you can parse them from the text, even if confidence is lower.
 Confidence scores: 1.0 = certain, 0.9 = very confident, 0.7–0.8 = likely, below 0.7 = uncertain.
+country: always use the full standard English name, never an abbreviation (e.g. "United States", not "USA" or "US").
+region: the single most specific named appellation/AVA only — no county, state, or country appended, and no "AVA"/"AOC"/"DOCG" suffix (e.g. "Alexander Valley", not "Alexander Valley, Sonoma County, California" or "Alexander Valley AVA").
 
 Also capture any personal notes the user mentioned (gifts, occasions, context) into the "notes" field. Examples:
 - "gift from Dom & Becca" → notes: "Gift from Dom & Becca"
@@ -140,6 +144,8 @@ export function buildLabelScanPrompt() {
 
 Only return what you can clearly read from the label. Use null for anything you cannot confidently determine.
 Do not guess or infer information not visible on the label.
+country: always use the full standard English name, never an abbreviation (e.g. "United States", not "USA" or "US").
+region: the single most specific named appellation/AVA only — no county, state, or country appended, and no "AVA"/"AOC"/"DOCG" suffix (e.g. "Alexander Valley", not "Alexander Valley, Sonoma County, California" or "Alexander Valley AVA").
 
 RESPOND WITH VALID JSON ONLY:
 {

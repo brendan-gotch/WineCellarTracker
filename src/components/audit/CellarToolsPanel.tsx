@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Loader2, RefreshCw, Sparkles } from 'lucide-react'
-import { previewSectionReassignment, applySectionReassignment, updateWineFact } from '@/actions/wines'
+import { Loader2, RefreshCw, Sparkles, MapPinned } from 'lucide-react'
+import { previewSectionReassignment, applySectionReassignment, updateWineFact, previewGeoNormalization, applyGeoNormalization } from '@/actions/wines'
 import { apiHeaders } from '@/lib/api-auth'
 import type { Wine } from '@/db/schema'
 
@@ -64,6 +64,86 @@ function ReassignTool() {
                   <td className="px-3 py-2 text-muted-foreground">{c.varietal_blend ?? '—'}</td>
                   <td className="px-3 py-2 text-center text-muted-foreground">{c.currentSection ?? '—'}</td>
                   <td className="px-3 py-2 text-center font-medium text-primary">{c.proposedSection}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setState('idle')}>Cancel</Button>
+          <Button onClick={apply}>Apply {changes.length} Changes</Button>
+        </div>
+      </div>
+    )
+  }
+
+  return null
+}
+
+type GeoChange = {
+  id: string
+  winery: string
+  wine_name: string
+  oldCountry: string | null
+  newCountry: string | null
+  oldRegion: string | null
+  newRegion: string | null
+}
+
+function GeoCleanupTool() {
+  const [state, setState] = useState<'idle' | 'previewing' | 'preview' | 'applying' | 'done'>('idle')
+  const [changes, setChanges] = useState<GeoChange[]>([])
+
+  const preview = async () => {
+    setState('previewing')
+    const result = await previewGeoNormalization()
+    setChanges(result)
+    setState('preview')
+  }
+
+  const apply = async () => {
+    setState('applying')
+    await applyGeoNormalization(changes.map(c => c.id))
+    setState('done')
+  }
+
+  if (state === 'idle') return (
+    <Button variant="outline" onClick={preview} className="flex items-center gap-2">
+      <MapPinned className="h-4 w-4" /> Clean Up Country/Region Names
+    </Button>
+  )
+  if (state === 'previewing') return <Button variant="outline" disabled><Loader2 className="h-4 w-4 animate-spin mr-2" />Scanning cellar...</Button>
+  if (state === 'done') return <p className="text-sm text-green-600 dark:text-green-400">✓ {changes.length} wines updated.</p>
+  if (state === 'applying') return <Button disabled><Loader2 className="h-4 w-4 animate-spin mr-2" />Applying...</Button>
+
+  if (state === 'preview') {
+    if (changes.length === 0) return <p className="text-sm text-muted-foreground">All country/region names already look consistent — no changes needed.</p>
+    return (
+      <div className="space-y-3">
+        <p className="text-sm font-medium">{changes.length} wines would be cleaned up:</p>
+        <div className="rounded-lg border border-border overflow-hidden max-h-56 overflow-y-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 sticky top-0">
+              <tr>
+                <th className="text-left px-3 py-2 font-medium text-muted-foreground">Wine</th>
+                <th className="text-left px-3 py-2 font-medium text-muted-foreground">Country</th>
+                <th className="text-left px-3 py-2 font-medium text-muted-foreground">Region</th>
+              </tr>
+            </thead>
+            <tbody>
+              {changes.map(c => (
+                <tr key={c.id} className="border-t border-border/50">
+                  <td className="px-3 py-2">{c.winery} {c.wine_name}</td>
+                  <td className="px-3 py-2 text-muted-foreground">
+                    {c.oldCountry !== c.newCountry
+                      ? <>{c.oldCountry ?? '—'} → <span className="font-medium text-primary">{c.newCountry ?? '—'}</span></>
+                      : (c.oldCountry ?? '—')}
+                  </td>
+                  <td className="px-3 py-2 text-muted-foreground">
+                    {c.oldRegion !== c.newRegion
+                      ? <>{c.oldRegion ?? '—'} → <span className="font-medium text-primary">{c.newRegion ?? '—'}</span></>
+                      : (c.oldRegion ?? '—')}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -148,6 +228,11 @@ export function CellarToolsPanel({ wines }: { wines: Wine[] }) {
         <div className="font-medium text-sm mb-1">Re-assign Sections</div>
         <div className="text-xs text-muted-foreground mb-3">Run body-weight section rules against your cellar and preview what would move.</div>
         <ReassignTool />
+      </div>
+      <div className="border-t border-border/50 pt-4">
+        <div className="font-medium text-sm mb-1">Clean Up Country/Region Names</div>
+        <div className="text-xs text-muted-foreground mb-3">Normalizes inconsistent country names (e.g. "USA" vs "United States") and collapses region names to just the specific appellation (e.g. "Alexander Valley, Sonoma County" → "Alexander Valley").</div>
+        <GeoCleanupTool />
       </div>
       <div className="border-t border-border/50 pt-4">
         <div className="font-medium text-sm mb-1">Refresh All "Why Interesting" Facts</div>

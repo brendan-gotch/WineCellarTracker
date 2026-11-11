@@ -2,10 +2,11 @@
 
 import { db } from '@/db'
 import { wines, type NewWine } from '@/db/schema'
-import { eq, desc, sql, and } from 'drizzle-orm'
+import { eq, desc, sql, and, inArray } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { getSession } from '@/lib/session'
 import { computeSectionLabels, assignSection } from '@/lib/cellar-sections'
+import { normalizeCountry, normalizeRegion } from '@/lib/geo-normalize'
 
 async function requireUserId(): Promise<string> {
   const session = await getSession()
@@ -124,4 +125,44 @@ export async function updateWineFact(id: string, why_interesting: string, perfec
     .set({ why_interesting, ...(perfect_pairing ? { perfect_pairing } : {}), updated_at: new Date() })
     .where(and(eq(wines.id, id), eq(wines.user_id, userId)))
   revalidatePath('/')
+}
+
+export async function previewGeoNormalization(): Promise<Array<{
+  id: string
+  winery: string
+  wine_name: string
+  oldCountry: string | null
+  newCountry: string | null
+  oldRegion: string | null
+  newRegion: string | null
+}>> {
+  const userId = await requireUserId()
+  const allWines = await db.select().from(wines).where(eq(wines.user_id, userId))
+
+  return allWines
+    .map(w => ({
+      id: w.id,
+      winery: w.winery,
+      wine_name: w.wine_name,
+      oldCountry: w.country,
+      newCountry: normalizeCountry(w.country),
+      oldRegion: w.region,
+      newRegion: normalizeRegion(w.region),
+    }))
+    .filter(w => w.newCountry !== w.oldCountry || w.newRegion !== w.oldRegion)
+}
+
+export async function applyGeoNormalization(ids: string[]) {
+  const userId = await requireUserId()
+  const rows = await db.select({ id: wines.id, country: wines.country, region: wines.region })
+    .from(wines)
+    .where(and(eq(wines.user_id, userId), inArray(wines.id, ids)))
+
+  for (const w of rows) {
+    await db.update(wines)
+      .set({ country: normalizeCountry(w.country), region: normalizeRegion(w.region), updated_at: new Date() })
+      .where(and(eq(wines.id, w.id), eq(wines.user_id, userId)))
+  }
+  revalidatePath('/')
+  return rows.length
 }
